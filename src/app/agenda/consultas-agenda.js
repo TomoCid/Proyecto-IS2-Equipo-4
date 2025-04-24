@@ -121,63 +121,60 @@ export async function getUserAgenda(userId) {
  * @param {number|null} [updateData.reminderOffsetMinutes] - Nuevo offset de recordatorio.
  * @returns {Promise<object>} La entrada de agenda actualizada.
  */
-export async function updateAgendaEntry(agendaId: number, userId: number, updateData: Record<string, any>) { // Añadido tipo a updateData para claridad
-    const setClauses: string[] = []; 
-    const values: any[] = []; 
-    let valueIndex = 1;
-  
-    Object.entries(updateData).forEach(([key, value]) => {
-      let columnName: string;
-      switch (key) {
-        case 'activityId': columnName = 'activity_id'; break;
-        case 'periodicidad': columnName = 'periodicidad'; break;
-        case 'fecha': columnName = 'fecha'; break;
-        case 'horaInicio': columnName = 'hora_inicio'; break;
-        case 'horaFin': columnName = 'hora_fin'; break;
-        case 'notes': columnName = 'notes'; break;
-        case 'latitude': columnName = 'location_latitude'; break;
-        case 'longitude': columnName = 'location_longitude'; break;
-        case 'reminderEnabled': columnName = 'reminder_enabled'; break;
-        case 'reminderOffsetMinutes': columnName = 'reminder_offset_minutes'; break;
-        default: return; 
-      }
-      
-      if (columnName) {
-          setClauses.push(`"${columnName}" = $${valueIndex++}`);
-          values.push(value); 
-      }
-    });
-  
-    if (setClauses.length === 0) {
-      throw new Error('No fields provided for update.');
-    }
+export async function updateAgendaEntry(agendaId, userId, updateData) {
+  const setClauses = [];
+  const values = [];
+  let valueIndex = 1;
 
-     setClauses.push(`"updated_at" = CURRENT_TIMESTAMP`);
-  
-     values.push(agendaId);
-     const agendaIdIndex = valueIndex++;
-     values.push(userId);
-     const userIdIndex = valueIndex++;
-  
-  
-     const query = `
-       UPDATE "Agenda"
-       SET ${setClauses.join(', ')}
-       WHERE id = $${agendaIdIndex} AND user_id = $${userIdIndex}
-       RETURNING *;
-     `;
-  
-     const client = await pool.connect();
-     try {
-       const result = await client.query(query, values); 
-       if (result.rows.length === 0) {
-         throw new Error('Agenda entry not found or user does not have permission to update.');
-       }
-       return result.rows[0];
-     } finally {
-       client.release();
-     }
+  Object.entries(updateData).forEach(([key, value]) => {
+    let columnName;
+    switch (key) {
+      case 'activityId': columnName = 'activity_id'; break;
+      case 'periodicidad': columnName = 'periodicidad'; break;
+      case 'fecha': columnName = 'fecha'; break;
+      case 'horaInicio': columnName = 'hora_inicio'; break;
+      case 'horaFin': columnName = 'hora_fin'; break;
+      case 'notes': columnName = 'notes'; break;
+      case 'latitude': columnName = 'location_latitude'; break;
+      case 'longitude': columnName = 'location_longitude'; break;
+      case 'reminderEnabled': columnName = 'reminder_enabled'; break;
+      case 'reminderOffsetMinutes': columnName = 'reminder_offset_minutes'; break;
+      default: return; 
+    }
+    setClauses.push(`"${columnName}" = $${valueIndex++}`);
+    values.push(value);
+  });
+
+  if (setClauses.length === 0) {
+    throw new Error('No fields provided for update.');
   }
+
+  setClauses.push(`"updated_at" = CURRENT_TIMESTAMP`);
+
+  values.push(agendaId);
+  const agendaIdIndex = valueIndex++;
+  values.push(userId);
+  const userIdIndex = valueIndex++;
+
+
+  const query = `
+    UPDATE "Agenda"
+    SET ${setClauses.join(', ')}
+    WHERE id = $${agendaIdIndex} AND user_id = $${userIdIndex}
+    RETURNING *;
+  `;
+
+  const client = await pool.connect();
+  try {
+    const result = await client.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('Agenda entry not found or user does not have permission to update.');
+    }
+    return result.rows[0];
+  } finally {
+    client.release();
+  }
+}
 
 
 /**
@@ -186,22 +183,20 @@ export async function updateAgendaEntry(agendaId: number, userId: number, update
  * @param {number} userId - ID del usuario propietario (para verificación).
  * @returns {Promise<boolean>} True si se eliminó, false si no se encontró o no tenía permiso.
  */
-export async function deleteAgendaEntry(agendaId: number, userId: number): Promise<boolean> {
-    const query = `
-      DELETE FROM "Agenda"
-      WHERE id = $1 AND user_id = $2
-      RETURNING id; -- Para verificar si se eliminó algo
-    `;
-    const client = await pool.connect();
-    try {
-      const result: pg.QueryResult<any> = await client.query(query, [agendaId, userId]);
-      return (result.rowCount ?? 0) > 0;
-  
-    } finally {
-      client.release();
-    }
+export async function deleteAgendaEntry(agendaId, userId) {
+  const query = `
+    DELETE FROM "Agenda"
+    WHERE id = $1 AND user_id = $2
+    RETURNING id; -- Para verificar si se eliminó algo
+  `;
+  const client = await pool.connect();
+  try {
+    const result = await client.query(query, [agendaId, userId]);
+    return result.rowCount > 0; 
+  } finally {
+    client.release();
   }
-  
+}
 
 /**
  * 5. Obtener actividades disponibles (activas) para un usuario con sus preferencias
@@ -279,6 +274,7 @@ export async function findScheduleConflicts(userId, fecha, newStartTime, newEndT
 export async function getUserAgendaWithWeatherPrefs(userId) {
   const query = `
     SELECT
+        a.*, -- Todos los campos de Agenda
         pref.min_temp,
         pref.max_temp,
         pref.max_wind_speed,
@@ -384,19 +380,3 @@ export async function updateAgendaLocation(agendaId, userId, latitude, longitude
   }
 }
 
-// Podrías exportar todas las funciones juntas si están en el mismo archivo:
-/*
-export {
-  createAgendaEntry,
-  getUserAgenda,
-  updateAgendaEntry,
-  deleteAgendaEntry,
-  getActiveUserActivitiesWithPrefs,
-  findScheduleConflicts,
-  getUserAgendaWithWeatherPrefs,
-  getRecurringAgendaEntries,
-  getPendingReminders,
-  updateAgendaLocation,
-  // ... también registerUser y loginUser si están aquí
-};
-*/
