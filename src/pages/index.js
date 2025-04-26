@@ -1,7 +1,15 @@
 import { useState } from "react";
 import "@/styles/login.css";
+import { useRouter } from "next/router";
 
 export default function Login() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const router = useRouter();
+
+    async function handleLogin(){
+        //pass
+    }
     return(
         <div className="login-container">
             <div className="welcome-text">
@@ -17,7 +25,7 @@ export default function Login() {
                 type="contraseña"
                 placeholder="contraseña"
               />
-            <button className="next-button">
+            <button className="next-button" onClick={handleLogin}>
                 Siguiente
             </button>
         </div>
