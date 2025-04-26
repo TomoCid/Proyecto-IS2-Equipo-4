@@ -14,6 +14,7 @@ export default function EditWeather() {
     localStorage.setItem("selectedWeather", selectedWeather);
     localStorage.setItem("temperature", temperature);
     console.log("Temperatura y clima guardados: "+ selectedWeather +" " + temperature + "°")
+    router.push("/dashboard");
   }
     return (
       <div className="weather-container">
