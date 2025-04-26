@@ -1,4 +1,3 @@
-// Importamos las funciones necesarias para el registro e inicio de sesión de usuarios
 import { registerUser, loginUser } from '../../../app/authentication/auth.service';
 
 /**

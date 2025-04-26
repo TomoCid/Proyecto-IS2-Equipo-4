@@ -18,15 +18,16 @@ const pool = new Pool({
 export async function registerUser(email, password, username) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const client = await pool.connect();
-
+  const query =`
+    INSERT 
+    INTO "user" 
+    (email, password, username) 
+    VALUES ($1, $2, $3) 
+    RETURNING id, email, username
+    `;
   try {
-    const result = await client.query(
-      `INSERT INTO "user" (email, password, username) VALUES ($1, $2, $3) RETURNING id, email, username`,
-      [email, hashedPassword, username]
-    );
-
+    const result = await client.query(query,[email, hashedPassword, username]);
     const user = result.rows[0];
-
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
@@ -51,7 +52,9 @@ export async function loginUser(email, password) {
 
   try {
     const result = await client.query(
-      `SELECT id, email, password, username FROM "user" WHERE email = $1`,
+      `SELECT id, email, password, username 
+      FROM "user" 
+      WHERE email = $1`,
       [email]
     );
 
