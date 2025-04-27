@@ -1,8 +1,53 @@
+import styles from "@/styles/editActivities.module.css";
+import { useRouter } from "next/router";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
+
 export default function EditActivities() {
-    return (
-      
-      <div>
-        <h1>Seleccione actividades de su preferencia</h1>
-      </div>
-    );
+  const router = useRouter();
+
+  function handleNextButton() {
+    router.push("/weather/edit");
   }
+
+  return (
+    <div className={`${montserrat.className} ${styles.wrapper}`}>
+      <div className={styles.activitiesContainer}>
+        <h1 className={styles.title}>Seleccione actividades de su preferencia</h1>
+
+        <div className={styles.activityItem}>
+          <div className={styles.activityName}>Yoga</div>
+          <input type="checkbox" id="yoga" className={styles.checkbox}/>
+        </div>
+
+        <div className={styles.activityItem}>
+          <div className={styles.activityName}>Ciclismo</div>
+          <input type="checkbox" id="ciclismo" className={styles.checkbox}/>
+        </div>
+
+        <div className={styles.activityItem}>
+          <div className={styles.activityName}>Trekking</div>
+          <input type="checkbox" id="trekking" className={styles.checkbox}/>
+        </div>
+
+        <div className={styles.activityItem}>
+          <div className={styles.activityName}>Fútbol</div>
+          <input type="checkbox" id="futbol" className={styles.checkbox}/>
+        </div>
+
+        <div className={styles.activityItem}>
+          <div className={styles.activityName}>Trote</div>
+          <input type="checkbox" id="trote" className={styles.checkbox}/>
+        </div>
+      </div>
+
+      <button className={styles.nextButton} onClick={handleNextButton}>
+        Siguiente
+      </button>
+    </div>
+  );
+}
