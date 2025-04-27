@@ -1,18 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-.weather-page {
+.wrapper {
+  background-color: #f9f0f7;
+  color: #000000; 
+  width: 100%;
+  min-height: 100vh;
+}
+
+.weatherPage {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto auto;
     gap: 20px;
-    
-  }
-  body {
     background-color: #f9f0f7;
     color: #000000; 
     font-family: 'Montserrat', sans-serif;
-  }
+}
   
-  .weather-container{
+  .weatherContainer{
     display: flex;
     align-items: center;
     justify-content: center;
@@ -32,19 +36,19 @@
     font-size: 25px;
   }
   
-  .left-label {
+  .leftLabel {
     text-align: center;
     grid-column: 1 / 2;
     grid-row: 2;
   }
   
-  .right-label {
+  .rightLabel {
     text-align: center;
     grid-column: 2 / 3;
     grid-row: 2;
   }
 
-  .left-label, .right-label{
+  .leftLabel, .rightLabel{
     font-size: 23px;
   }
   
@@ -68,7 +72,7 @@
     grid-row: 3;
   }
 
-  .temperature-input{
+  .temperatureInput{
     font-size: 100px; 
     font-weight: bold;
     padding: 10px 20px;
@@ -78,10 +82,10 @@
     box-sizing: border-box;
     outline: none;
 }
-.temperature-input:after{
+.temperatureInput:after{
   content: "\00b0";
 }
-  .next-button {
+  .nextButton {
     position: absolute;
     bottom: 20px;
     right: 270px; 
@@ -93,11 +97,11 @@
     cursor: pointer;
   }
 
-  .next-button:hover{
+  .nextButton:hover{
     background-color: rgb(112, 69, 153);
   }
 
-  .back-button{
+  .backButton{
     position: absolute;
     bottom: 20px;
     left: 270px;
@@ -108,7 +112,7 @@
     border-radius: 10px; 
     cursor: pointer;
   }
-  .back-button:hover{
+  .backButton:hover{
     background-color: rgb(112, 69, 153);
   }
 
