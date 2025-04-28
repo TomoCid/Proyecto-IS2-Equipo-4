@@ -1,6 +1,12 @@
 import { useState } from "react";
-import "@/styles/login.css";
+import styles from "@/styles/login.module.css";
 import { useRouter } from "next/router";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -11,23 +17,25 @@ export default function Login() {
         //pass
     }
     return(
-        <div className="login-container">
-            <div className="welcome-text">
-                <h1>Bienvenido</h1>
+        <div className={`${montserrat.className} ${styles.wrapper}`}>
+            <div className={styles.loginContainer}>
+                <div className={styles.welcomeText}>
+                    <h1>Bienvenido</h1>
+                </div>
+                <input
+                    className={styles.inputField}
+                    type="text"
+                    placeholder="email@dominio.com"
+                />
+                <input
+                    className={styles.inputField}
+                    type="contraseña"
+                    placeholder="contraseña"
+                />
+                <button className={styles.nextButton} onClick={handleLogin}>
+                    Siguiente
+                </button>
             </div>
-            <input
-                className="input-field"
-                type="text"
-                placeholder="email@dominio.com"
-              />
-            <input
-                className="input-field"
-                type="contraseña"
-                placeholder="contraseña"
-              />
-            <button className="next-button" onClick={handleLogin}>
-                Siguiente
-            </button>
         </div>
     );
 }

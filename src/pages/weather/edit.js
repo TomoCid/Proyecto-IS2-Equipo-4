@@ -1,58 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { Montserrat } from "next/font/google";
 
-import "@/styles/editWeather.css";
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
+
+import styles from "@/styles/editWeather.module.css";
 
 export default function EditWeather() {
   const router = useRouter();
-  const [temperature, setTemperature] = useState("");
+  const [temperature, setTemperature] = useState("22°");
   const [selectedWeather, setSelectedWeather] = useState("Soleado");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selectedWeather", selectedWeather);
+      localStorage.setItem("temperature", temperature);
+    }
+  }, [selectedWeather, temperature]);
+
   function handleBackButton() {
     router.push("/activities/edit");
   }
-  function handleNextButton(){
-    localStorage.setItem("selectedWeather", selectedWeather);
-    localStorage.setItem("temperature", temperature);
-    console.log("Temperatura y clima guardados: "+ selectedWeather +" " + temperature + "°")
+
+  function handleNextButton() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("selectedWeather", selectedWeather);
+      localStorage.setItem("temperature", temperature);
+      console.log("Temperatura y clima guardados: " + selectedWeather + " " + temperature + "°");
+    }
     router.push("/dashboard");
   }
-    return (
-      <div className="weather-container">
-          <div className="weather-page">
-          
-            <div className="title">
-              
-              <header>
-                <h1>Ingrese el clima de su localidad</h1>
-              </header>
-            </div>
 
-            <div className="left-label">
-              <p>Estado del tiempo</p>
-            </div>
-            <div className="left">
-              <select 
-              style={{ color: "black", backgroundColor: "white"}}
-                value={selectedWeather}
-                onChange={(e) => setSelectedWeather(e.target.value)}
-              >
-                <option value="Soleado">☀️ Soleado</option>
-                <option value="Parcialmente Nublado">⛅ Parcialmente Nublado</option>
-                <option value="Nublado">☁️ Nublado</option>
-                <option value="Neblina">🌫️ Neblina</option>
-                <option value="Lluvioso">🌧️ Lluvioso</option>
-                <option value="Tormenta">⛈️ Tormenta</option>
-                <option value="Granizo">🌨️ Granizo</option>
-                <option value="Nieve">❄️ Nieve</option>
-              </select>
-            </div>
+  return (
+    <div className={`${montserrat.className} ${styles.wrapper}`}>
+      <div className={styles.weatherContainer}>
+        <div className={styles.weatherPage}>
+          <div className={styles.title}>
+            <header>
+              <h1>Ingrese el clima de su localidad</h1>
+            </header>
+          </div>
 
-            <div className="right-label">
-              <p>Temperatura</p>
-            </div>
-            <div className="right">
+          <div className={styles.leftLabel}>
+            <p>Estado del tiempo</p>
+          </div>
+          <div className={styles.left}>
+            <select
+              style={{ color: "black", backgroundColor: "white" }}
+              value={selectedWeather}
+              onChange={(e) => setSelectedWeather(e.target.value)}
+            >
+              <option value="Soleado">☀️ Soleado</option>
+              <option value="Parcialmente Nublado">⛅ Parcialmente Nublado</option>
+              <option value="Nublado">☁️ Nublado</option>
+              <option value="Neblina">🌫️ Neblina</option>
+              <option value="Lluvioso">🌧️ Lluvioso</option>
+              <option value="Tormenta">⛈️ Tormenta</option>
+              <option value="Granizo">🌨️ Granizo</option>
+              <option value="Nieve">❄️ Nieve</option>
+            </select>
+          </div>
+
+          <div className={styles.rightLabel}>
+            <p>Temperatura</p>
+          </div>
+          <div className={styles.right}>
             <input
-              className="temperature-input"
+              className={styles.temperatureInput}
               type="text"
               inputMode="numeric"
               placeholder="22°"
@@ -68,9 +85,10 @@ export default function EditWeather() {
               }}
             />
           </div>
-          </div>
-          <button className="next-button" onClick={handleNextButton}>Siguiente</button>
-          <button className="back-button" onClick={handleBackButton}>←</button>
         </div>
-    );
-  }
+        <button className={styles.nextButton} onClick={handleNextButton}>Siguiente</button>
+        <button className={styles.backButton} onClick={handleBackButton}>←</button>
+      </div>
+    </div>
+  );
+}
