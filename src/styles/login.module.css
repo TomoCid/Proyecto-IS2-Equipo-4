@@ -56,3 +56,18 @@
 .nextButton:hover {
     background-color: #425298;
 }
+
+.registerText {
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  
+  .registerLink {
+    color: #6475c3;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .registerLink:hover {
+    color: #425298;
+  }

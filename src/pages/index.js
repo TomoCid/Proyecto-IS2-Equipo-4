@@ -16,6 +16,9 @@ export default function Login() {
     async function handleLogin(){
         //pass
     }
+    async function handleRegisterLink(){
+        router.push("/signup");
+    }
     return(
         <div className={`${montserrat.className} ${styles.wrapper}`}>
             <div className={styles.loginContainer}>
@@ -35,6 +38,15 @@ export default function Login() {
                 <button className={styles.nextButton} onClick={handleLogin}>
                     Siguiente
                 </button>
+                <p className={styles.registerText}>
+                ¿No tienes una cuenta?{" "}
+                <span 
+                    className={styles.registerLink}
+                    onClick={handleRegisterLink}
+                >
+                Regístrate ahora
+                </span>
+            </p>
             </div>
         </div>
     );
