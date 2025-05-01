@@ -2,6 +2,8 @@ import { useState } from "react";
 import styles from "@/styles/login.module.css";
 import { useRouter } from "next/router";
 import { Montserrat } from "next/font/google";
+import { toast } from "react-toastify";
+import { ToastContainer } from 'react-toastify';
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -14,7 +16,10 @@ export default function Login() {
     const router = useRouter();
 
     async function handleLogin(){
-        //pass
+        if (!email || !password) {
+            toast.error("Por favor, completa todos los campos.");
+            return;
+          }
     }
     async function handleRegisterLink(){
         router.push("/signup");
@@ -46,7 +51,16 @@ export default function Login() {
                 >
                 Regístrate ahora
                 </span>
-            </p>
+                </p>
+                <ToastContainer 
+                    position="top-right"
+                    autoClose={1500}
+                    hideProgressBar={false}
+                    closeOnClick
+                    pauseOnHover
+                    draggable
+                    theme="light"
+                />
             </div>
         </div>
     );
