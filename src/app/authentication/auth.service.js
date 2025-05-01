@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import pg from 'pg';
 
 const { Pool } = pg;
+
+// Configuración de la conexión a la base de datos
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -10,24 +12,24 @@ const pool = new Pool({
 
 /**
  * 1. Registra un nuevo usuario en la base de datos.
- * @param {string} email - Correo del usuario
- * @param {string} password - Contraseña del usuario (sin hashear)
- * @param {string} username - Nombre de usuario
- * @returns {Object} Objeto que contiene el token y los datos del usuario registrado
+ * @param {string} email - Correo del usuario.
+ * @param {string} password - Contraseña del usuario.
+ * @param {string} username - Nombre de usuario.
+ * @returns {Object} Token y datos del usuario registrado.
  */
 export async function registerUser(email, password, username) {
   const hashedPassword = await bcrypt.hash(password, 10);
   const client = await pool.connect();
-  const query =`
-    INSERT 
-    INTO "user" 
-    (email, password, username) 
-    VALUES ($1, $2, $3) 
-    RETURNING id, email, username
-    `;
+
   try {
-    const result = await client.query(query,[email, hashedPassword, username]);
+    const query = `
+      INSERT INTO "users" (email, password, username)
+      VALUES ($1, $2, $3)
+      RETURNING id, email, username
+    `;
+    const result = await client.query(query, [email, hashedPassword, username]);
     const user = result.rows[0];
+
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET,
@@ -41,22 +43,21 @@ export async function registerUser(email, password, username) {
 }
 
 /**
- * 2. Inicia sesión de un usuario validando su contraseña.
- * @param {string} email - Correo del usuario
- * @param {string} password - Contraseña del usuario (sin hashear)
- * @returns {Object} Objeto que contiene el token y los datos del usuario autenticado
- * @throws {Error} Si el usuario no existe o la contraseña es incorrecta
+ * 2. Inicia sesión de un usuario.
+ * @param {string} email - Correo del usuario.
+ * @param {string} password - Contraseña del usuario.
+ * @returns {Object} Token y datos del usuario autenticado.
  */
 export async function loginUser(email, password) {
   const client = await pool.connect();
 
   try {
-    const result = await client.query(
-      `SELECT id, email, password, username 
-      FROM "user" 
-      WHERE email = $1`,
-      [email]
-    );
+    const query = `
+      SELECT id, email, password, username
+      FROM "users"
+      WHERE email = $1
+    `;
+    const result = await client.query(query, [email]);
 
     if (result.rows.length === 0) {
       throw new Error('User not found');
@@ -75,14 +76,7 @@ export async function loginUser(email, password) {
       { expiresIn: '1h' }
     );
 
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username
-      }
-    };
+    return { token, user: { id: user.id, email: user.email, username: user.username } };
   } finally {
     client.release();
   }
