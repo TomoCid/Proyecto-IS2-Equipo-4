@@ -1,7 +1,13 @@
-import { login } from '@/controllers/auth.controller';
+import { login } from '@/app/controllers/auth.controller';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     return login(req, res);
   }
 
