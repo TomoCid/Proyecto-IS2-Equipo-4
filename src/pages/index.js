@@ -42,7 +42,7 @@ export default function Login() {
       toast.success("Inicio de sesión exitoso");
       localStorage.setItem("token", data.token); // Guarda el token en localStorage
       setTimeout(() => {
-        router.push("/dashboard"); // Redirige al dashboard
+        router.push("activities/edit"); // Redirige al dashboard
       }, 1500);
     } catch (err) {
       console.error("Error en el inicio de sesión:", err.message);
