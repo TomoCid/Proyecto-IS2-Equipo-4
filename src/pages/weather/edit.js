@@ -13,11 +13,27 @@ export default function EditWeather() {
   const router = useRouter();
   const [temperature, setTemperature] = useState("22°");
   const [selectedWeather, setSelectedWeather] = useState("Soleado");
+  const [activities, setActivities] = useState(null);
+  useEffect(() => {
+    const savedActivities = localStorage.getItem("selectedActivities");
+    if (savedActivities) {
+      const parsedActivities = JSON.parse(savedActivities);
+      setActivities(parsedActivities);
+    }
+  }, []);
 
+  useEffect(() => {
+    // puedes obtener todas las actividades cargada asi:
+    console.log("Actividades cargadas:", activities);
+    // o una en especifico asi:
+    console.log("Ciclismo:", activities?.ciclismo);
+  }, [activities]);
+  
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("selectedWeather", selectedWeather);
       localStorage.setItem("temperature", temperature);
+      console.log("Temperatura y clima guardados:", selectedWeather, temperature);
     }
   }, [selectedWeather, temperature]);
 
