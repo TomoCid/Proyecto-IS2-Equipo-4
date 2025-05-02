@@ -2,7 +2,7 @@
 
 /* Fondo del Dashboard */
 .dashboard-container {
-    background: linear-gradient(to right, #6EE7B7, #f63b3b);
+    background: linear-gradient(to right, #2c3e50, #4ca1af);
     min-height: 100vh;
     padding: 20px;
 }

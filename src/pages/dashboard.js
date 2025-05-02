@@ -4,6 +4,7 @@ import '../styles/dashboard.css';
 import AjustesClima from './ajustes-clima.js';
 
 const Dashboard = () => {
+  const [activities, setActivities] = useState(null);
   const [user, setUser] = useState({});
   const [agenda, setAgenda] = useState([]);
   const [clima, setClima] = useState({});
@@ -12,6 +13,15 @@ const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  useEffect(() => {
+    const savedActivities = localStorage.getItem("selectedActivities");
+
+    if (savedActivities) {
+      const parsedActivities = JSON.parse(savedActivities);
+      setActivities(parsedActivities);
+    }
+  }, []);
 
   useEffect(() => {
     const obtenerDatosDashboard = async () => {
@@ -24,11 +34,21 @@ const Dashboard = () => {
         };
         setUser(userData);
 
-        const agendaData = [
-          { id: 1, actividad_nombre: 'Correr al aire libre', fecha: '2025-04-25', hora_inicio: '08:00', hora_fin: '09:00' },
-          { id: 2, actividad_nombre: 'Ir al gimnasio', fecha: '2025-04-25', hora_inicio: '10:00', hora_fin: '11:00' },
-          { id: 3, actividad_nombre: 'Leer en el parque', fecha: '2025-04-25', hora_inicio: '12:00', hora_fin: '13:00' }
-        ];
+        if (!activities) {
+          throw new Error("No hay actividades seleccionadas. Por favor selecciona tus actividades.");
+        }
+
+        const selectedActivities = Object.entries(activities)
+          .filter(([key, value]) => value)
+          .map(([key]) => key);
+
+        const agendaData = selectedActivities.map((actividad, index) => ({
+          id: index + 1,
+          actividad_nombre: actividad,
+          fecha: "2025-04-25",
+          hora_inicio: "10:00",
+          hora_fin: "11:00"
+        }));
         setAgenda(agendaData);
 
         const savedWeather = localStorage.getItem("selectedWeather");
@@ -58,7 +78,7 @@ const Dashboard = () => {
     };
 
     obtenerDatosDashboard();
-  }, []);
+  }, [activities]);
 
   const getWeatherIcon = (description) => {
     switch (description) {
@@ -74,19 +94,23 @@ const Dashboard = () => {
     }
   };
 
-  // Nueva función para verificar si la actividad es adecuada para el clima
   const isActivitySuitableForWeather = (activityName) => {
     const weatherDescription = clima.weather?.[0]?.description || '';
 
-    if (activityName === 'Correr al aire libre') {
-      return weatherDescription !== 'Lluvioso' && weatherDescription !== 'Tormenta' && weatherDescription !== 'Nieve';
+    switch (activityName.toLowerCase()) {
+      case "yoga":
+        return true;
+      case "ciclismo":
+        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
+      case "trekking":
+        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
+      case "futbol":
+        return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
+      case "trote":
+        return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
+      default:
+        return true;
     }
-
-    if (activityName === 'Leer en el parque') {
-      return weatherDescription === 'Soleado' || weatherDescription === 'Parcialmente Nublado';
-    }
-
-    return true;
   };
 
   const openModal = (type) => {
@@ -114,7 +138,6 @@ const Dashboard = () => {
     setClima(updatedClima);
     localStorage.setItem('selectedWeather', newWeatherDescription);
     localStorage.setItem('temperature', `${newTemperature}°`);
-
     closeModal();
   };
 
@@ -136,11 +159,9 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Fondo que se difumina cuando el menú está abierto */}
       {showSettingsMenu && <div className="background-blur" />}
 
       <div className="dashboard-content">
-        {/* Botón de Configuración */}
         <div className="absolute top-5 right-5">
           <div className="relative">
             <FaCog className="text-2xl cursor-pointer settings-icon" onClick={toggleSettingsMenu} />
@@ -153,7 +174,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bienvenida */}
         <div className="text-center p-6">
           <h2 className="dashboard-title">
             <FaSmile className="inline-block mr-2 text-2xl text-yellow-400" />
@@ -162,7 +182,6 @@ const Dashboard = () => {
           <p className="dashboard-welcome">{user.email}</p>
         </div>
 
-        {/* Clima */}
         <div className="clima-container">
           <h2 className="clima-title">Clima en {clima.name}</h2>
           <div className="text-lg text-gray-700">
@@ -174,7 +193,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Agenda */}
         <div className="agenda-container">
           <h3 className="agenda-title">Actividades de tu Agenda</h3>
           <div className="space-y-6">
@@ -185,7 +203,6 @@ const Dashboard = () => {
                   <div className="agenda-item-time">
                     {actividad.fecha} {actividad.hora_inicio} - {actividad.hora_fin}
                   </div>
-                  {/* Verificación de si la actividad es adecuada para el clima */}
                   <p className={`activity-suitability ${isActivitySuitableForWeather(actividad.actividad_nombre) ? 'text-green-600' : 'text-red-600'}`}>
                     {isActivitySuitableForWeather(actividad.actividad_nombre)
                       ? '¡Puedes realizar esta actividad con el clima actual!'
@@ -200,7 +217,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
