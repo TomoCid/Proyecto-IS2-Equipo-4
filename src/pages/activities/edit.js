@@ -27,6 +27,7 @@ export default function EditActivities() {
   }
 
   function handleNextButton() {
+    localStorage.setItem("selectedActivities", JSON.stringify(selectedActivities));
     console.log(selectedActivities)
     router.push("/weather/edit");
   }
