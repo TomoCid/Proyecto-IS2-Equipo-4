@@ -30,8 +30,9 @@ export async function registerUser(email, password, username) {
     const result = await client.query(query, [email, hashedPassword, username]);
     const user = result.rows[0];
 
+    // Incluye el username en el token
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -41,7 +42,6 @@ export async function registerUser(email, password, username) {
     client.release();
   }
 }
-
 /**
  * 2. Inicia sesión de un usuario.
  * @param {string} email - Correo del usuario.
@@ -71,7 +71,7 @@ export async function loginUser(email, password) {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      { id: user.id, email: user.email, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );

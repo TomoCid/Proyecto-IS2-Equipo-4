@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FaSmile, FaCog } from 'react-icons/fa';
 import '../styles/dashboard.css';
+import {jwtDecode} from 'jwt-decode'; // Asegúrate de instalar jwt-decode: npm install jwt-decode
 import AjustesClima from './ajustes-clima.js';
 
 const Dashboard = () => {
@@ -28,9 +29,18 @@ const Dashboard = () => {
       try {
         setLoading(true);
 
+        // Obtén el token del localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No se encontró un token. Por favor inicia sesión.");
+        }
+
+        // Decodifica el token para obtener los datos del usuario
+        const decodedToken = jwtDecode(token);
+        console.log("Token decodificado:", decodedToken);
         const userData = {
-          username: "Juan Pérez",
-          email: "juan.perez@correo.com"
+          username: decodedToken.username,
+          email: decodedToken.email,
         };
         setUser(userData);
 
@@ -98,15 +108,15 @@ const Dashboard = () => {
     const weatherDescription = clima.weather?.[0]?.description || '';
 
     switch (activityName.toLowerCase()) {
-      case "yoga":
+      case "Yoga":
         return true;
-      case "ciclismo":
+      case "Ciclismo":
         return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
-      case "trekking":
+      case "Trekking":
         return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
-      case "futbol":
+      case "Futbol":
         return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
-      case "trote":
+      case "Trote":
         return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
       default:
         return true;
