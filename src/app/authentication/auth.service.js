@@ -4,7 +4,6 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// Configuración de la conexión a la base de datos
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -30,7 +29,6 @@ export async function registerUser(email, password, username) {
     const result = await client.query(query, [email, hashedPassword, username]);
     const user = result.rows[0];
 
-    // Incluye el username en el token
     const token = jwt.sign(
       { id: user.id, email: user.email, username: user.username },
       process.env.JWT_SECRET,

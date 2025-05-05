@@ -108,16 +108,16 @@ const Dashboard = () => {
     const weatherDescription = clima.weather?.[0]?.description || '';
 
     switch (activityName.toLowerCase()) {
-      case "Yoga":
+      case "yoga":
         return true;
-      case "Ciclismo":
+      case "yiclismo":
         return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
-      case "Trekking":
+      case "trekking":
         return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
-      case "Futbol":
-        return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
-      case "Trote":
-        return !["Lluvioso", "Tormenta", "Granizo"].includes(weatherDescription);
+      case "futbol":
+        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
+      case "trote":
+        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
       default:
         return true;
     }
