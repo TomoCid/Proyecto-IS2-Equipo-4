@@ -118,7 +118,7 @@ export default function WeatherDisplay({ ciudad: initialCiudad }) {
         mainContent = <p className={styles.message}>No hay datos de clima disponibles para {currentCiudad}. Intenta con otra ciudad.</p>;
     } else {
         const { current, location, forecast } = weatherData;
-        const todayForecast = forecast.forecastday[0];
+        const todayForecast = forecast.forecastday[1];
         const todayEpochStartAtLocation = todayForecast.date_epoch;
         const currentHourInLocation = new Date(location.localtime_epoch * 1000).getHours();
         const hourlyForecastsToShow = todayForecast.hour
