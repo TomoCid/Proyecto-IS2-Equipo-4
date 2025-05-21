@@ -171,7 +171,7 @@ export default function WeatherDisplay({ ciudad: initialCiudad }) {
                             className={`${styles.tabButton} ${activeTab === 'daily' ? styles.active : ''}`}
                             onClick={() => setActiveTab('daily')}
                         >
-                            Próximos 7 días
+                            Diario
                         </button>
                         <button
                             className={`${styles.tabButton} ${activeTab === 'hourly' ? styles.active : ''}`}
