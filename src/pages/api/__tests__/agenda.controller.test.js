@@ -1,4 +1,4 @@
-import * as agendaController from '../weather/weatherController.js'; 
+import * as agendaController from '../weather/[ciudad].js'; 
 import * as agendaModel from '@/app/agenda/consultas-agenda.js'; 
 
 jest.mock('@/app/agenda/consultas-agenda.js');

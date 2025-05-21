@@ -1,13 +1,12 @@
 const axios = require('axios');
 require('dotenv').config();
 
-const apiKey = process.env.OPENWEATHER_API_KEY;
-const weatherBaseUrl = 'https://api.openweathermap.org/data/2.5/weather'; // Clima actual
-const forecastBaseUrl = 'https://api.openweathermap.org/data/2.5/forecast'; // Pronóstico 5 días 
+const apiKey = process.env.WEATHERAPI_KEY;
+const baseUrl = process.env.NEXT_PUBLIC_WEATHERAPI_BASE_URL || 'https://api.weatherapi.com/v1';
 
 if (!apiKey) {
     console.error("Error: La variable de entorno OPENWEATHER_API_KEY no está definida.");
-    process.exit(1);
+    //process.exit(1);
 }
 
 /**
@@ -16,19 +15,26 @@ if (!apiKey) {
  * @param {string} ciudad - El nombre de la ciudad (para mensajes de error).
  */
 function handleWeatherApiError(error, ciudad) {
-    console.error(`Error al obtener datos del clima para ${ciudad}:`);
+    console.error(`Error al obtener datos del clima para ${ciudad} desde WeatherAPI:`);
     if (error.response) {
         console.error(`  Código de Estado: ${error.response.status}`);
-        console.error(`  Mensaje del servidor: ${error.response.data?.message || JSON.stringify(error.response.data)}`);
-        if (error.response.status === 401) {
-            console.error("  -> Problema de Autenticación: Verifica tu API Key.");
-        } else if (error.response.status === 404) {
+        const errorData = error.response.data?.error;
+        if (errorData) {
+            console.error(`  Código de API: ${errorData.code}`);
+            console.error(`  Mensaje de API: ${errorData.message}`);
+        } else {
+            console.error(`  Mensaje del servidor: ${JSON.stringify(error.response.data)}`);
+        }
+        
+        if (error.response.status === 401 || errorData?.code === 2006 || errorData?.code === 1002) {
+            console.error("  -> Problema de Autenticación/API Key. Verifica tu WEATHERAPI_KEY.");
+        } else if (error.response.status === 400 && errorData?.code === 1006) {
             console.error(`  -> Ciudad No Encontrada: Verifica que '${ciudad}' sea correcto.`);
-        } else if (error.response.status === 429) {
-             console.error("  -> Límite de Tasa Excedido: Demasiadas peticiones a la API.");
+        } else if (error.response.status === 403 && (errorData?.code === 2007 || errorData?.code === 2008)) {
+            console.error("  -> Problema con la API Key (quota excedida o deshabilitada).");
         }
     } else if (error.request) {
-        console.error("  Error de Red: No se pudo conectar con OpenWeatherMap.");
+        console.error("  Error de Red: No se pudo conectar con WeatherAPI.");
         console.error(`  Detalles: ${error.message}`);
     } else {
         console.error('  Error Inesperado:', error.message);
@@ -37,57 +43,42 @@ function handleWeatherApiError(error, ciudad) {
 
 
 /**
- * Obtiene los datos del clima ACTUAL para una ciudad.
- * @param {string} ciudad - El nombre de la ciudad (ej. "Concepcion,cl").
- * @param {string} unidades - 'metric', 'imperial', 'standard'.
+ * Obtiene datos completos del clima (actual, pronóstico por horas y por días) para una ciudad.
+ * @param {string} ciudad - El nombre de la ciudad (ej. "Concepcion").
+ * @param {number} diasPronostico - Número de días para el pronóstico (max 3 en plan gratuito, hasta 10 en planes de pago).
  * @param {string} idioma - Código de idioma (ej. 'es').
- * @returns {Promise<object|null>} Datos del clima actual o null.
+ * @returns {Promise<object|null>} Datos del clima o null si hay error.
  */
-async function obtenerClimaActual(ciudad, unidades = 'metric', idioma = 'es') {
+async function obtenerClimaCompleto(ciudad, diasPronostico = 7, idioma = 'es') {
+    if (!apiKey) {
+        console.error("Error crítico: WEATHERAPI_KEY no está configurada en el servidor.");
+        return null;
+    }
     if (!ciudad || typeof ciudad !== 'string' || ciudad.trim() === '') {
         console.error("Error: Debes proporcionar un nombre de ciudad válido.");
         return null;
     }
-    const params = { q: ciudad, appid: apiKey, units: unidades, lang: idioma };
+
+    const params = {
+        key: apiKey,
+        q: ciudad,
+        days: diasPronostico,
+        lang: idioma,
+        aqi: 'no', // Calidad del aire: 'yes' o 'no'
+        alerts: 'no' // Alertas: 'yes' o 'no'
+    };
+
     try {
-        console.log(`Buscando clima ACTUAL para: ${ciudad}...`);
-        const respuesta = await axios.get(weatherBaseUrl, { params });
-        console.log(`Petición de clima actual exitosa (Estado: ${respuesta.status})`);
-        return respuesta.data;
+        console.log(`Buscando clima completo para: ${ciudad} (${diasPronostico} días, idioma: ${idioma})...`);
+        const respuesta = await axios.get(`${baseUrl}/forecast.json`, { params });
+        console.log(`Petición de clima completo exitosa para ${ciudad} (Estado: ${respuesta.status})`);
+        return respuesta.data; // Contiene current, forecast (con forecastday, y cada forecastday tiene hour)
     } catch (error) {
         handleWeatherApiError(error, ciudad);
         return null;
     }
 }
-
-/**
- * Obtiene el pronóstico del clima por horas (5 días / 3 horas) para una ciudad.
- * @param {string} ciudad - El nombre de la ciudad (ej. "Concepcion,cl").
- * @param {string} unidades - 'metric', 'imperial', 'standard'.
- * @param {string} idioma - Código de idioma (ej. 'es').
- * @returns {Promise<object|null>} Datos del pronóstico o null. La estructura contiene una lista `list` con los pronósticos cada 3 horas.
- */
-async function obtenerPronosticoPorHoras(ciudad, unidades = 'metric', idioma = 'es') {
-    if (!ciudad || typeof ciudad !== 'string' || ciudad.trim() === '') {
-        console.error("Error: Debes proporcionar un nombre de ciudad válido para el pronóstico.");
-        return null;
-    }
-    const params = { q: ciudad, appid: apiKey, units: unidades, lang: idioma };
-    try {
-        console.log(`Buscando PRONÓSTICO por horas para: ${ciudad}...`);
-        const respuesta = await axios.get(forecastBaseUrl, { params });
-        console.log(`Petición de pronóstico exitosa (Estado: ${respuesta.status})`);
-        // La respuesta contiene city (info de la ciudad) y list (array de pronósticos)
-        return respuesta.data;
-    } catch (error) {
-        handleWeatherApiError(error, ciudad);
-        return null;
-    }
-}
-
 
 module.exports = {
-    obtenerClimaActual,
-    obtenerPronosticoPorHoras,
-    obtenerClima: obtenerClimaActual
+    obtenerClimaCompleto,
 };
