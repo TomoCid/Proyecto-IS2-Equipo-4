@@ -32,3 +32,24 @@ export async function getUserById(userId) {
     client.release();
   }
 }
+
+/**
+ * 2. Obtiene todas las actividades de un usuario, incluyendo las del sistema (user_id NULL).
+ * @param {number} userId 
+ * @returns {Array}
+ */
+export async function getActividadesByUserId(userId) {
+  const client = await pool.connect();
+
+  try {
+    const query = `
+      SELECT id, user_id, name, description, icon_name
+      FROM "activities"
+      WHERE user_id = $1 OR user_id IS NULL
+    `;
+    const result = await client.query(query, [userId]);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
