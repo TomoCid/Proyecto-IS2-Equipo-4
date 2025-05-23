@@ -3,8 +3,8 @@ import React from "react";
 function CrearAgenda() {
   async function probarCrearAgenda() {
     const entryData = {
-      userId: 1,
-      activityId: 2,
+      userId: 2,
+      activityId: 4,
       periodicidad: 1,
       fecha: "2025-05-23",
       horaInicio: "10:00:00",
