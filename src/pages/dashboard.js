@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
   const [modalType, setModalType] = useState('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
@@ -200,6 +201,7 @@ const Dashboard = () => {
               <span className="weather-icon">{getWeatherIcon(clima.weather?.[0]?.description)}</span>
               {clima.weather?.[0]?.description}
             </p>
+            <button className="agendarButton" onClick={() => setAgendarModalAbierto(true)}> Agendar Actividad </button>
           </div>
         </div>
 
@@ -246,6 +248,36 @@ const Dashboard = () => {
                 <button className="save-button" onClick={closeModal}>Guardar</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {agendarModalAbierto && (
+        <div
+          className="modal-overlay z-10 bg-white"
+          onClick={() => setAgendarModalAbierto(false)}
+        >
+          <div
+            className="modal-container-square border border-gray-500"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center text-black">
+              <h3>Agendar Actividad</h3>
+              <div className="form-group flex flex-col gap-4">
+                <select defaultValue="" className="border p-2 rounded">
+                  <option value="" disabled>
+                    Selecciona una actividad
+                  </option>
+                  <option value="placeholder1">Placeholder 1</option>
+                  <option value="placeholder2">Placeholder 2</option>
+                  <option value="placeholder3">Placeholder 3</option>
+                  <option value="placeholder4">Placeholder 4</option>
+                </select>
+                <input type="datetime-local" />
+                <button onClick={() => setAgendarModalAbierto(false)}>
+                  Guardar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
