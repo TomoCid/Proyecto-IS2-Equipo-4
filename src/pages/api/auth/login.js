@@ -1,4 +1,4 @@
-import { login } from '@/app/controllers/auth.controller';
+import { login } from '@/pages/api/auth/auth.controller';
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
