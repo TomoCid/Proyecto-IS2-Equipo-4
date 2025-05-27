@@ -10,12 +10,33 @@ const Dashboard = () => {
   const [agenda, setAgenda] = useState([]);
   const [clima, setClima] = useState({});
   const [loading, setLoading] = useState(true);
+  const [ciudad, setCiudad] = useState("");
+  const [fecha, setFecha] = useState("");
+  const [actividadSeleccionada, setActividadSeleccionada] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaTermino, setHoraTermino] = useState("");
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
   const [modalType, setModalType] = useState('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-
+  const StarIcon = () => (
+    <svg
+      width="20"
+      height="19"
+      viewBox="0 0 20 19"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M10 1.66669L12.575 6.88335L18.3334 7.72502L14.1667 11.7834L15.15 17.5167L10 14.8084L4.85002 17.5167L5.83335 11.7834L1.66669 7.72502L7.42502 6.88335L10 1.66669Z"
+        stroke="#1E1E1E"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
   useEffect(() => {
     const savedActivities = localStorage.getItem("selectedActivities");
 
@@ -251,36 +272,114 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      {agendarModalAbierto && (
-        <div
-          className="modal-overlay z-10 bg-white"
-          onClick={() => setAgendarModalAbierto(false)}
-        >
-          <div
-            className="modal-container-square border border-gray-500"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center text-black">
-              <h3>Agendar Actividad</h3>
-              <div className="form-group flex flex-col gap-4">
-                <select defaultValue="" className="border p-2 rounded">
-                  <option value="" disabled>
-                    Selecciona una actividad
-                  </option>
-                  <option value="placeholder1">Placeholder 1</option>
-                  <option value="placeholder2">Placeholder 2</option>
-                  <option value="placeholder3">Placeholder 3</option>
-                  <option value="placeholder4">Placeholder 4</option>
-                </select>
-                <input type="datetime-local" />
-                <button onClick={() => setAgendarModalAbierto(false)}>
-                  Guardar
-                </button>
+
+
+  {agendarModalAbierto && (
+    <div
+      className="modal-overlay z-10 bg-white"
+      onClick={() => setAgendarModalAbierto(false)}
+    >
+      <div
+        className="modal-container-auto border border-gray-500 rounded shadow-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center text-black">
+          <h3 className="mb-4 text-lg font-semibold">Agendar Actividad</h3>
+          <div className="form-group flex flex-col gap-4">
+            
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                <StarIcon />
               </div>
+              <select
+                value={actividadSeleccionada}
+                onChange={(e) => setActividadSeleccionada(e.target.value)}
+                defaultValue=""
+                className="pl-8 border p-2 rounded w-full bg-purple-100"
+              >
+                <option value="" disabled>Selecciona una actividad</option>
+                <option value="Yoga">Yoga</option>
+                <option value="Trekking">Trekking</option>
+                <option value="Ciclismo">Ciclismo</option>
+                <option value="Fútbol">Fútbol</option>
+                <option value="Trote">Trote</option>
+              </select>
             </div>
+
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none ">
+
+              </div>
+              <input
+                type="text"
+                value={ciudad}
+                onChange={(e) => setCiudad(e.target.value)}
+                placeholder="Agregar ubicación "
+                className="pl-10 border p-2 rounded w-full bg-purple-100 "
+              />
+            </div>
+
+            <p className="text-left font-medium text-black">Fecha</p>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+
+              </div>
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="pl-10 border p-2 rounded w-full bg-green-100"
+              />
+            </div>
+            <div className="flex gap-4">
+              <input
+                type="time"
+                value={horaInicio}
+                onChange={(e) => setHoraInicio(e.target.value)}
+                className="border p-2 rounded w-full bg-green-100"
+              />
+              <input
+                type="time"
+                value={horaTermino}
+                onChange={(e) => setHoraTermino(e.target.value)}
+                className="border p-2 rounded w-full bg-green-100"
+              />
+            </div>
+
+            <div className="flex justify-center gap-2 mt-4">
+              <button
+                className="boton-verde-modal"
+                onClick={() => {
+                    const actividad = {
+                    nombre: actividadSeleccionada,
+                    ciudad,
+                    fecha,
+                    horaInicio,
+                    horaTermino,
+                  };
+                  console.log("Actividad agendada:", actividad);
+                  localStorage.setItem('actividadAgendada', JSON.stringify(actividad));
+                  setAgendarModalAbierto(false);
+                }}
+              >
+                Guardar
+              </button>
+              <button
+                className="boton-rojo-modal"
+                onClick={() => setAgendarModalAbierto(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  )}
+
+
     </div>
   );
 };
