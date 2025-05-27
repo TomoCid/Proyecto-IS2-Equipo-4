@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { FaSmile, FaCog } from 'react-icons/fa';
 import '../styles/dashboard.css';
-import {jwtDecode} from 'jwt-decode'; // Asegúrate de instalar jwt-decode: npm install jwt-decode
+import { jwtDecode } from 'jwt-decode';
 import AjustesClima from './ajustes-clima.js';
 
 const Dashboard = () => {
@@ -37,9 +38,22 @@ const Dashboard = () => {
       />
     </svg>
   );
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
+
+  // Verifica si el usuario está autenticado
+  // y redirige a la página de inicio si no lo está [Si les molesta esto durante el desarrollo, pueden comentar esta parte]
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/");
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     const savedActivities = localStorage.getItem("selectedActivities");
-
     if (savedActivities) {
       const parsedActivities = JSON.parse(savedActivities);
       setActivities(parsedActivities);
@@ -47,19 +61,14 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (checkingAuth) return;
+
     const obtenerDatosDashboard = async () => {
       try {
         setLoading(true);
 
-        // Obtén el token del localStorage
         const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("No se encontró un token. Por favor inicia sesión.");
-        }
-
-        // Decodifica el token para obtener los datos del usuario
         const decodedToken = jwtDecode(token);
-        console.log("Token decodificado:", decodedToken);
         const userData = {
           username: decodedToken.username,
           email: decodedToken.email,
@@ -110,7 +119,7 @@ const Dashboard = () => {
     };
 
     obtenerDatosDashboard();
-  }, [activities]);
+  }, [activities, checkingAuth]);
 
   const getWeatherIcon = (description) => {
     switch (description) {
@@ -132,12 +141,9 @@ const Dashboard = () => {
     switch (activityName.toLowerCase()) {
       case "yoga":
         return true;
-      case "yiclismo":
-        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
+      case "ciclismo":
       case "trekking":
-        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
       case "futbol":
-        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
       case "trote":
         return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
       default:
@@ -160,6 +166,13 @@ const Dashboard = () => {
     setShowSettingsMenu(prev => !prev);
   };
 
+  const handleLogout = () => {
+    if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+      localStorage.removeItem("token");
+      router.replace("/");
+    }
+  };
+
   const handleSaveWeather = (newWeatherDescription, newTemperature) => {
     const updatedClima = {
       ...clima,
@@ -172,6 +185,10 @@ const Dashboard = () => {
     localStorage.setItem('temperature', `${newTemperature}°`);
     closeModal();
   };
+
+  if (checkingAuth) {
+    return null; // O un spinner si prefieres
+  }
 
   if (loading) {
     return (
@@ -201,6 +218,7 @@ const Dashboard = () => {
               <div className="menu-float">
                 <button onClick={() => openModal('clima')}>Ajustes Clima</button>
                 <button onClick={() => openModal('actividad')}>Ajustes Actividades</button>
+                <button onClick={handleLogout}>Cerrar Sesión</button>
               </div>
             )}
           </div>
@@ -333,12 +351,12 @@ const Dashboard = () => {
               />
             </div>
             <div className="flex gap-4">
-              <input
-                type="time"
-                value={horaInicio}
-                onChange={(e) => setHoraInicio(e.target.value)}
-                className="border p-2 rounded w-full bg-green-100"
-              />
+            <input
+              type="time"
+              value={horaInicio}
+              onChange={(e) => setHoraInicio(e.target.value)}
+              className="border p-2 rounded w-full bg-green-100"
+            />
               <input
                 type="time"
                 value={horaTermino}
