@@ -1,405 +1,760 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { FiSearch, FiMapPin, FiCalendar, FiX, FiCheck, FiAlertCircle, FiBookmark, FiClock, FiPlus, FiSettings } from 'react-icons/fi';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import { useRouter } from 'next/router';
-import { FaSmile, FaCog } from 'react-icons/fa';
-import '../styles/dashboard.css';
 import { jwtDecode } from 'jwt-decode';
-import AjustesClima from './ajustes-clima.js';
+import '../styles/dashboard.css';
 
-const Dashboard = () => {
-  const [activities, setActivities] = useState(null);
-  const [user, setUser] = useState({});
-  const [agenda, setAgenda] = useState([]);
-  const [clima, setClima] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [ciudad, setCiudad] = useState("");
-  const [fecha, setFecha] = useState("");
+export default function Dashboard() {
+  const router = useRouter();
+  
+  // Estados del usuario
+  const [usuario, setUsuario] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  // Estados del clima
+  const [weatherData, setWeatherData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [detectedLocation, setDetectedLocation] = useState(null);
+  const [detectStatus, setDetectStatus] = useState('idle');
+  const [detectError, setDetectError] = useState(null);
+  const [inputCiudad, setInputCiudad] = useState('');
+  const [currentCiudad, setCurrentCiudad] = useState(null);
+
+  // Estados de actividades
+  const [showSearch, setShowSearch] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [scheduledActivities, setScheduledActivities] = useState([]);
+  const [showActivities, setShowActivities] = useState(false);
+  const [showAddActivity, setShowAddActivity] = useState(false);
+  const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
+  
+  // Estados para el modal de agendar
   const [actividadSeleccionada, setActividadSeleccionada] = useState("");
+  const [ciudadActividad, setCiudadActividad] = useState("");
+  const [fechaActividad, setFechaActividad] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaTermino, setHoraTermino] = useState("");
-  const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
-  const [modalType, setModalType] = useState('');
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  // StarIcon para el modal de agendar
   const StarIcon = () => (
-    <svg
-      width="20"
-      height="19"
-      viewBox="0 0 20 19"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M10 1.66669L12.575 6.88335L18.3334 7.72502L14.1667 11.7834L15.15 17.5167L10 14.8084L4.85002 17.5167L5.83335 11.7834L1.66669 7.72502L7.42502 6.88335L10 1.66669Z"
-        stroke="#1E1E1E"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="20" height="19" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 1.66669L12.575 6.88335L18.3334 7.72502L14.1667 11.7834L15.15 17.5167L10 14.8084L4.85002 17.5167L5.83335 11.7834L1.66669 7.72502L7.42502 6.88335L10 1.66669Z" 
+            stroke="#1E1E1E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const router = useRouter();
 
-  // Verifica si el usuario está autenticado
-  // y redirige a la página de inicio si no lo está [Si les molesta esto durante el desarrollo, pueden comentar esta parte]
+  // Verificar autenticación al cargar
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem('token');
     if (!token) {
-      router.replace("/");
+      router.replace('/');
     } else {
-      setCheckingAuth(false);
+      try {
+        const decoded = jwtDecode(token);
+        setUsuario({
+          username: decoded.username || 'Usuario',
+          email: decoded.email || 'usuario@email.com'
+        });
+        setCheckingAuth(false);
+
+        // Cargar actividades guardadas por usuario
+        const actividadesKey = `actividades_${decoded.email}`;
+        const savedActivities = localStorage.getItem(actividadesKey);
+        if (savedActivities) {
+          setScheduledActivities(JSON.parse(savedActivities));
+        }
+      } catch (err) {
+        console.error('Error decodificando token:', err);
+        sessionStorage.removeItem('token');
+        router.replace('/');
+      }
     }
   }, [router]);
 
-  useEffect(() => {
-    const savedActivities = localStorage.getItem("selectedActivities");
-    if (savedActivities) {
-      const parsedActivities = JSON.parse(savedActivities);
-      setActivities(parsedActivities);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (checkingAuth) return;
-
-    const obtenerDatosDashboard = async () => {
-      try {
-        setLoading(true);
-
-        const token = localStorage.getItem("token");
-        const decodedToken = jwtDecode(token);
-        const userData = {
-          username: decodedToken.username,
-          email: decodedToken.email,
-        };
-        setUser(userData);
-
-        if (!activities) {
-          throw new Error("No hay actividades seleccionadas. Por favor selecciona tus actividades.");
-        }
-
-        const selectedActivities = Object.entries(activities)
-          .filter(([key, value]) => value)
-          .map(([key]) => key);
-
-        const agendaData = selectedActivities.map((actividad, index) => ({
-          id: index + 1,
-          actividad_nombre: actividad,
-          fecha: "2025-04-25",
-          hora_inicio: "10:00",
-          hora_fin: "11:00"
-        }));
-        setAgenda(agendaData);
-
-        const savedWeather = localStorage.getItem("selectedWeather");
-        const savedTemperature = localStorage.getItem("temperature");
-
-        if (!savedWeather || !savedTemperature) {
-          throw new Error("Faltan datos de clima. Por favor selecciona el clima primero.");
-        }
-
-        const numericTemperature = parseInt(savedTemperature.replace("°", ""), 10);
-        const climaData = {
-          name: "Tu localidad",
-          main: { temp: numericTemperature },
-          weather: [{ description: savedWeather }]
-        };
-        setClima(climaData);
-
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-        setUser({});
-        setAgenda([]);
-        setClima({});
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    obtenerDatosDashboard();
-  }, [activities, checkingAuth]);
-
-  const getWeatherIcon = (description) => {
-    switch (description) {
-      case "Soleado": return "☀️";
-      case "Parcialmente Nublado": return "⛅";
-      case "Nublado": return "☁️";
-      case "Neblina": return "🌫️";
-      case "Lluvioso": return "🌧️";
-      case "Tormenta": return "⛈️";
-      case "Granizo": return "🌨️";
-      case "Nieve": return "❄️";
-      default: return "🌈";
-    }
-  };
-
-  const isActivitySuitableForWeather = (activityName) => {
-    const weatherDescription = clima.weather?.[0]?.description || '';
-
-    switch (activityName.toLowerCase()) {
-      case "yoga":
-        return true;
-      case "ciclismo":
-      case "trekking":
-      case "futbol":
-      case "trote":
-        return !["Lluvioso", "Tormenta", "Granizo", "Nieve"].includes(weatherDescription);
-      default:
-        return true;
-    }
-  };
-
-  const openModal = (type) => {
-    setModalType(type);
-    setIsModalOpen(true);
-    setShowSettingsMenu(false);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setModalType('');
-  };
-
-  const toggleSettingsMenu = () => {
-    setShowSettingsMenu(prev => !prev);
-  };
-
+  // Función para cerrar sesión
   const handleLogout = () => {
-    if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) {
-      localStorage.removeItem("token");
-      router.replace("/");
+    if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+      const actividadesKey = `actividades_${usuario?.email}`;
+      localStorage.removeItem(actividadesKey);
+      sessionStorage.removeItem('token');
+      router.replace('/');
     }
   };
 
-  const handleSaveWeather = (newWeatherDescription, newTemperature) => {
-    const updatedClima = {
-      ...clima,
-      main: { temp: parseInt(newTemperature, 10) },
-      weather: [{ description: newWeatherDescription }]
-    };
+  // Funciones para el clima
+  const activitiesForSelectedDate = scheduledActivities.filter(activity => {
+    const activityDate = new Date(activity.date).toDateString();
+    const selectedDate = new Date(calendarDate).toDateString();
+    return activityDate === selectedDate;
+  });
 
-    setClima(updatedClima);
-    localStorage.setItem('selectedWeather', newWeatherDescription);
-    localStorage.setItem('temperature', `${newTemperature}°`);
-    closeModal();
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 5000);
   };
 
-  if (checkingAuth) {
-    return null; // O un spinner si prefieres
+  useEffect(() => {
+    if (detectedLocation?.lat && detectedLocation?.lon) {
+      fetchWeather(detectedLocation.lat, detectedLocation.lon);
+    } else if (currentCiudad) {
+      fetchWeather(null, null, currentCiudad);
+    }
+  }, [detectedLocation, currentCiudad]);
+
+  async function fetchWeather(lat, lon, ciudad) {
+    setLoading(true);
+    setError(null);
+    showNotification('loading', `Buscando clima para ${ciudad || 'tu ubicación'}...`);
+    
+    try {
+      let url = '';
+      if (lat && lon) {
+        url = `/api/weather/coords?lat=${lat}&lon=${lon}&lang=es`;
+      } else if (ciudad) {
+        url = `/api/weather/${encodeURIComponent(ciudad)}?lang=es`;
+      }
+
+      const res = await fetch(url);
+      
+      if (!res.ok) {
+        throw new Error(res.status === 404 
+          ? 'Ciudad no encontrada' 
+          : 'Error al obtener datos del clima');
+      }
+
+      const data = await res.json();
+      setWeatherData(data);
+      showNotification('success', `Clima actualizado para ${data.location.name}`);
+    } catch (err) {
+      setError(err.message);
+      showNotification('error', `Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <span className="text-2xl text-blue-600">Cargando...</span>
-      </div>
+  function handleDetectLocation() {
+    if (!navigator.geolocation) {
+      const errorMsg = 'Tu navegador no soporta geolocalización o está desactivada';
+      setDetectError(errorMsg);
+      showNotification('error', errorMsg);
+      return;
+    }
+
+    setDetectStatus('loading');
+    setDetectError(null);
+    showNotification('loading', 'Detectando tu ubicación...');
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        if (typeof latitude !== 'number' || typeof longitude !== 'number' || 
+            isNaN(latitude) || isNaN(longitude)) {
+          throw new Error('Coordenadas inválidas obtenidas');
+        }
+
+        setDetectedLocation({
+          lat: latitude,
+          lon: longitude
+        });
+        setDetectStatus('success');
+        showNotification('success', 'Ubicación detectada correctamente');
+        fetchWeather(latitude, longitude);
+      },
+      (error) => {
+        let errorMessage = 'Error al obtener la ubicación';
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Permiso de ubicación denegado. Por favor habilita los permisos de ubicación en tu navegador.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'No se pudo obtener tu ubicación. Verifica tu conexión a internet y que el GPS esté activado.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'El tiempo de espera se agotó. Intenta nuevamente en un área con mejor señal.';
+            break;
+          default:
+            errorMessage = `Error desconocido: ${error.message}`;
+        }
+        
+        setDetectError(errorMessage);
+        showNotification('error', errorMessage);
+        setDetectStatus('error');
+        console.error('Error en geolocalización:', error);
+      },
+      geoOptions
     );
   }
 
-  if (error) {
+  function handleCityChange(e) {
+    setInputCiudad(e.target.value);
+  }
+
+  function handleCitySubmit(e) {
+    e.preventDefault();
+    const ciudad = inputCiudad.trim();
+    if (!ciudad) {
+      showNotification('error', 'Por favor ingresa una ciudad');
+      return;
+    }
+    setCurrentCiudad(ciudad);
+    setShowSearch(false);
+    setInputCiudad('');
+  }
+
+  const loadScheduledActivities = async () => {
+    try {
+      setShowCalendar(true);
+    } catch (error) {
+      showNotification('error', 'Error al cargar actividades');
+    }
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Función para guardar actividad desde el modal de agendar
+  const handleAgendarActividad = () => {
+    if (!actividadSeleccionada) {
+      showNotification('error', 'Por favor selecciona una actividad');
+      return;
+    }
+
+    const nuevaActividad = {
+      id: Date.now(),
+      title: actividadSeleccionada,
+      description: ciudadActividad ? `Ubicación: ${ciudadActividad}` : '',
+      date: fechaActividad || new Date(),
+      time: `${horaInicio || '12:00'}${horaTermino ? ` - ${horaTermino}` : ''}`
+    };
+
+    const actividadesKey = `actividades_${usuario?.email}`; // o username si prefieres
+
+    const actividadesActualizadas = [...scheduledActivities, nuevaActividad];
+    setScheduledActivities(actividadesActualizadas);
+    localStorage.setItem(actividadesKey, JSON.stringify(actividadesActualizadas));
+    
+    setAgendarModalAbierto(false);
+    showNotification('success', 'Actividad agendada correctamente');
+    
+    // Resetear campos
+    setActividadSeleccionada("");
+    setCiudadActividad("");
+    setFechaActividad("");
+    setHoraInicio("");
+    setHoraTermino("");
+  };
+
+  const [selectedForecast, setSelectedForecast] = useState(null);
+  const [showForecastTooltip, setShowForecastTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+
+  const forecastSectionRef = useRef(null);
+  const tooltipRef = useRef(null);
+
+  // Cierra el tooltip al hacer click fuera
+  useEffect(() => {
+    if (!showForecastTooltip) return;
+    function handleClickOutside(e) {
+      if (
+        tooltipRef.current &&
+        !tooltipRef.current.contains(e.target) &&
+        forecastSectionRef.current &&
+        !forecastSectionRef.current.contains(e.target)
+      ) {
+        setShowForecastTooltip(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showForecastTooltip]);
+
+  // Muestra el tooltip cerca de la tarjeta clickeada
+  const handleForecastClick = (day, event) => {
+    setSelectedForecast(day);
+    setShowForecastTooltip(true);
+
+    // Calcula la posición a la derecha de la tarjeta
+    const cardRect = event.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      top: cardRect.top + window.scrollY + cardRect.height / 2,
+      left: cardRect.right + window.scrollX + 16, // 16px de separación
+      align: 'right'
+    });
+  };
+
+  if (checkingAuth) {
+    return null;
+  }
+
+  if (!usuario) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-red-100">
-        <span className="text-2xl text-red-600">Error: {error}</span>
+      <div className="flex justify-center items-center min-h-screen">
+        <p>Redirigiendo...</p>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      {showSettingsMenu && <div className="background-blur" />}
-
-      <div className="dashboard-content">
-        <div className="absolute top-5 right-5">
-          <div className="relative">
-            <FaCog className="text-2xl cursor-pointer settings-icon" onClick={toggleSettingsMenu} />
-            {showSettingsMenu && (
-              <div className="menu-float">
-                <button onClick={() => openModal('clima')}>Ajustes Clima</button>
-                <button onClick={() => openModal('actividad')}>Ajustes Actividades</button>
-                <button onClick={handleLogout}>Cerrar Sesión</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="text-center p-6">
-          <h2 className="dashboard-title">
-            <FaSmile className="inline-block mr-2 text-2xl text-yellow-400" />
-            Bienvenido, {user.username}!
-          </h2>
-          <p className="dashboard-welcome">{user.email}</p>
-        </div>
-
-        <div className="clima-container">
-          <h2 className="clima-title">Clima en {clima.name}</h2>
-          <div className="text-lg text-gray-700">
-            <p className="clima-temp">{clima.main?.temp}°C</p>
-            <p className="clima-description">
-              <span className="weather-icon">{getWeatherIcon(clima.weather?.[0]?.description)}</span>
-              {clima.weather?.[0]?.description}
-            </p>
-            <button className="agendarButton" onClick={() => setAgendarModalAbierto(true)}> Agendar Actividad </button>
-          </div>
-        </div>
-
-        <div className="agenda-container">
-          <h3 className="agenda-title">Actividades de tu Agenda</h3>
-          <div className="space-y-6">
-            {agenda.length > 0 ? (
-              agenda.map((actividad) => (
-                <div key={actividad.id} className="agenda-item">
-                  <div className="agenda-item-title">{actividad.actividad_nombre}</div>
-                  <div className="agenda-item-time">
-                    {actividad.fecha} {actividad.hora_inicio} - {actividad.hora_fin}
-                  </div>
-                  <p className={`activity-suitability ${isActivitySuitableForWeather(actividad.actividad_nombre) ? 'text-green-600' : 'text-red-600'}`}>
-                    {isActivitySuitableForWeather(actividad.actividad_nombre)
-                      ? '¡Puedes realizar esta actividad con el clima actual!'
-                      : 'No se recomienda realizar esta actividad debido al clima.'}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No tienes actividades en tu agenda.</p>
-            )}
-          </div>
+    <div className="appWrapper">
+      {/* Botón de ajustes en la esquina superior derecha */}
+      <div className="absolute top-5 right-5 z-50">
+        <div className="relative">
+          <FiSettings 
+            className="text-2xl cursor-pointer text-gray-700 hover:text-blue-600"
+            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+          />
+          {showSettingsMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+              <button
+                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                onClick={handleLogout}
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            {modalType === 'clima' ? (
-              <AjustesClima
-                climaActual={clima}
-                onClose={closeModal}
-                onSave={handleSaveWeather}
-              />
-            ) : (
-              <div>
-                <h3>Editar Actividad</h3>
-                <div className="form-group">
-                  <input type="text" placeholder="Nombre de la actividad" />
-                  <input type="datetime-local" />
-                </div>
-                <button className="save-button" onClick={closeModal}>Guardar</button>
-              </div>
-            )}
+      {/* Notificación flotante */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <div className="notification-content">
+            {notification.type === 'loading' && <div className="spinner"></div>}
+            {notification.type === 'success' && <FiCheck className="notification-icon" />}
+            {notification.type === 'error' && <FiAlertCircle className="notification-icon" />}
+            <span>{notification.message}</span>
           </div>
+          <button 
+            className="notification-close"
+            onClick={() => setNotification(null)}
+          >
+            <FiX />
+          </button>
         </div>
       )}
 
-
-  {agendarModalAbierto && (
-    <div
-      className="modal-overlay z-10 bg-white"
-      onClick={() => setAgendarModalAbierto(false)}
-    >
-      <div
-        className="modal-container-auto border border-gray-500 rounded shadow-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-center text-black">
-          <h3 className="mb-4 text-lg font-semibold">Agendar Actividad</h3>
-          <div className="form-group flex flex-col gap-4">
+      {/* Sidebar*/}
+      <aside className="sidebar">
+        <div className="sidebar-content">
+          {/* Botón de búsqueda */}
+          <div className="sidebar-item">
+            <button 
+              className="sidebar-button" 
+              onClick={() => setShowSearch(!showSearch)}
+            >
+              <FiSearch className="sidebar-icon" />
+              <span>Buscar ciudad</span>
+            </button>
             
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-                <StarIcon />
-              </div>
-              <select
-                value={actividadSeleccionada}
-                onChange={(e) => setActividadSeleccionada(e.target.value)}
-                defaultValue=""
-                className="pl-8 border p-2 rounded w-full bg-purple-100"
-              >
-                <option value="" disabled>Selecciona una actividad</option>
-                <option value="Yoga">Yoga</option>
-                <option value="Trekking">Trekking</option>
-                <option value="Ciclismo">Ciclismo</option>
-                <option value="Fútbol">Fútbol</option>
-                <option value="Trote">Trote</option>
-              </select>
-            </div>
+            {showSearch && (
+              <form onSubmit={handleCitySubmit} className="sidebar-search-form">
+                <input
+                  type="text"
+                  value={inputCiudad}
+                  onChange={handleCityChange}
+                  placeholder="Ej: Madrid, Barcelona..."
+                  className="sidebar-input"
+                  autoFocus
+                />
+                <button type="submit" className="search-submit-button">
+                  Buscar
+                </button>
+              </form>
+            )}
+          </div>
 
+          {/* Botón de ubicación */}
+          <div className="sidebar-item">
+            <button 
+              className="sidebar-button"
+              onClick={handleDetectLocation}
+              disabled={detectStatus === 'loading'}
+            >
+              <FiMapPin className="sidebar-icon" />
+              <span>
+                {detectStatus === 'loading' ? 'Detectando...' : 'Mi ubicación'}
+              </span>
+            </button>
+          </div>
 
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none ">
+          {/* Botón de actividades */}
+          <div className="sidebar-item">
+            <button 
+              className="sidebar-button"
+              onClick={() => {
+                setShowActivities(!showActivities);
+                setShowAddActivity(false);
+              }}
+            >
+              <FiBookmark className="sidebar-icon" />
+              <span>Mis actividades</span>
+            </button>
+          </div>
 
-              </div>
-              <input
-                type="text"
-                value={ciudad}
-                onChange={(e) => setCiudad(e.target.value)}
-                placeholder="Agregar ubicación "
-                className="pl-10 border p-2 rounded w-full bg-purple-100 "
-              />
-            </div>
+          {/* Botón de Calendario */}
+          <div className="sidebar-item">
+            <button 
+              className="sidebar-button"
+              onClick={loadScheduledActivities}
+            >
+              <FiCalendar className="sidebar-icon" />
+              <span>Calendario</span>
+            </button>
+          </div>
 
-            <p className="text-left font-medium text-black">Fecha</p>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-
-              </div>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className="pl-10 border p-2 rounded w-full bg-green-100"
-              />
-            </div>
-            <div className="flex gap-4">
-            <input
-              type="time"
-              value={horaInicio}
-              onChange={(e) => setHoraInicio(e.target.value)}
-              className="border p-2 rounded w-full bg-green-100"
-            />
-              <input
-                type="time"
-                value={horaTermino}
-                onChange={(e) => setHoraTermino(e.target.value)}
-                className="border p-2 rounded w-full bg-green-100"
-              />
-            </div>
-
-            <div className="flex justify-center gap-2 mt-4">
-              <button
-                className="boton-verde-modal"
-                onClick={() => {
-                    const actividad = {
-                    nombre: actividadSeleccionada,
-                    ciudad,
-                    fecha,
-                    horaInicio,
-                    horaTermino,
-                  };
-                  console.log("Actividad agendada:", actividad);
-                  localStorage.setItem('actividadAgendada', JSON.stringify(actividad));
-                  setAgendarModalAbierto(false);
-                }}
-              >
-                Guardar
-              </button>
-              <button
-                className="boton-rojo-modal"
-                onClick={() => setAgendarModalAbierto(false)}
-              >
-                Cancelar
-              </button>
-            </div>
-
+          {/* Nuevo botón para agendar actividad */}
+          <div className="sidebar-item">
+            <button 
+              className="sidebar-button"
+              onClick={() => setAgendarModalAbierto(true)}
+            >
+              <FiPlus className="sidebar-icon" />
+              <span>Agendar Actividad</span>
+            </button>
           </div>
         </div>
-      </div>
-    </div>
-  )}
+      </aside>
 
+      {/* Contenido principal */}
+      <main className="dashboardContainer">
+        <header className="userHeader">
+          <h1 className="title">👋 ¡Bienvenido, {usuario.username}!</h1>
+          <p className="userEmail">📧 {usuario.email}</p>
+          {weatherData?.location && (
+            <p className="cityInfo">
+              🌍 <strong>{weatherData.location.name}, {weatherData.location.region}</strong>
+            </p>
+          )}
+        </header>
 
+        {loading && (
+          <div className="statusBubble loading">
+            <div className="spinner"></div> Buscando datos del clima...
+          </div>
+        )}
+
+        {error && (
+          <div className="statusBubble error">
+            <FiAlertCircle /> Error: {error}
+          </div>
+        )}
+
+        {detectError && (
+          <div className="statusBubble error">
+            <FiAlertCircle /> {detectError}
+          </div>
+        )}
+
+        {/* Modal de Calendario */}
+        {showCalendar && (
+          <div className="calendar-modal-overlay">
+            <div className="calendar-modal">
+              <div className="modal-header">
+                <h2>Mis Actividades Agendadas</h2>
+                <button 
+                  className="modal-close-button"
+                  onClick={() => setShowCalendar(false)}
+                  aria-label="Cerrar calendario"
+                >
+                  <FiX className="close-icon" />
+                </button>
+              </div>
+              
+              <div className="calendar-container">
+                <Calendar
+                  onChange={setCalendarDate}
+                  value={calendarDate}
+                  locale="es"
+                  className="react-calendar-custom"
+                  tileContent={({ date, view }) => {
+                    if (view === 'month') {
+                      const hasActivity = scheduledActivities.some(
+                        activity => new Date(activity.date).toDateString() === date.toDateString()
+                      );
+                      return hasActivity ? <div className="calendar-activity-dot" /> : null;
+                    }
+                  }}
+                />
+                
+                <div className="calendar-activities-container">
+                  <h3 className="calendar-selected-date">
+                    {formatDate(calendarDate)}
+                  </h3>
+                  
+                  {activitiesForSelectedDate.length > 0 ? (
+                    <div className="activities-list">
+                      {activitiesForSelectedDate.map(activity => (
+                        <div key={activity.id} className="activity-card">
+                          <div className="activity-time">
+                            <FiClock className="activity-icon" />
+                            {activity.time}
+                          </div>
+                          <div className="activity-content">
+                            <h4>{activity.title}</h4>
+                            {activity.description && (
+                              <p className="activity-description">
+                                {activity.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-activities">
+                      No hay actividades programadas para este día
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Actividades */}
+        {showActivities && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <button 
+                className="modal-close-button"
+                onClick={() => setShowActivities(false)}
+              >
+                <FiX />
+              </button>
+              
+              <h2>Mis Actividades</h2>
+              
+              <div className="activities-list-container">
+                {scheduledActivities.length > 0 ? (
+                  scheduledActivities.map(activity => (
+                    <div key={activity.id} className="activity-item">
+                      <h3>{activity.title}</h3>
+                      {activity.description && (
+                        <p>{activity.description}</p>
+                      )}
+                      <div className="activity-meta">
+                        <span><FiCalendar /> {new Date(activity.date).toLocaleDateString('es-ES')}</span>
+                        <span><FiClock /> {activity.time}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="no-activities">No tienes actividades programadas</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Agendar Actividad */}
+        {agendarModalAbierto && (
+          <div className="modal-overlay" onClick={() => setAgendarModalAbierto(false)}>
+            <div className="modal-agendar-container" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-agendar-content">
+                <h3 className="modal-agendar-title">Agendar Actividad</h3>
+                <div className="modal-agendar-form">
+                  <div className="modal-agendar-input-group">
+                    <div className="modal-agendar-icon">
+                      <StarIcon />
+                    </div>
+                    <select
+                      value={actividadSeleccionada}
+                      onChange={(e) => setActividadSeleccionada(e.target.value)}
+                      className="modal-agendar-select"
+                    >
+                      <option value="" disabled>Selecciona una actividad</option>
+                      <option value="Yoga">Yoga</option>
+                      <option value="Ciclismo">Ciclismo</option>
+                      <option value="Trekking">Trekking</option>
+                      <option value="Natación">Natación</option>
+                      <option value="Gimnasio">Gimnasio</option>
+                    </select>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={ciudadActividad}
+                    onChange={(e) => setCiudadActividad(e.target.value)}
+                    placeholder="Ubicación (opcional)"
+                    className="modal-agendar-input"
+                  />
+
+                  <input
+                    type="date"
+                    value={fechaActividad}
+                    onChange={(e) => setFechaActividad(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+
+                  <div className="modal-agendar-time-section">
+                    <div className="modal-agendar-time-group">
+                      <label className="modal-agendar-time-label">Hora de inicio</label>
+                      <input
+                        type="time"
+                        value={horaInicio}
+                        onChange={(e) => setHoraInicio(e.target.value)}
+                        className="modal-agendar-time-input"
+                      />
+                    </div>
+                    
+                    <div className="modal-agendar-time-group">
+                      <label className="modal-agendar-time-label">Hora de término</label>
+                      <input
+                        type="time"
+                        value={horaTermino}
+                        onChange={(e) => setHoraTermino(e.target.value)}
+                        className="modal-agendar-time-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="modal-agendar-buttons">
+                    <button
+                      className="modal-agendar-button modal-agendar-button-primary"
+                      onClick={handleAgendarActividad}
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      className="modal-agendar-button modal-agendar-button-secondary"
+                      onClick={() => setAgendarModalAbierto(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && (
+          <div className="welcome-message">
+            <h2>Consulta el clima de cualquier ciudad</h2>
+            <p>Usa el buscador o el botón de ubicación para comenzar</p>
+          </div>
+        )}
+
+        {weatherData && !showCalendar && !showActivities && !agendarModalAbierto && (
+          <div className="weatherContent">
+            <div className="weatherMainCard">
+              <div className="currentWeatherSection compact">
+                <div className="weatherIconContainer">
+                  <img
+                    className="weatherIconLarge"
+                    src={`https:${weatherData.current.condition.icon}`}
+                    alt={weatherData.current.condition.text}
+                  />
+                </div>
+                <div className="temperatureLarge">
+                  {Math.round(weatherData.current.temp_c)}<span className="degree">°C</span>
+                </div>
+                <div className="conditionTextLarge">
+                  {weatherData.current.condition.text}
+                </div>
+              </div>
+              <div className="weatherDetailsGrid compact">
+                {[
+                  { emoji: '💧', label: 'Humedad', value: `${weatherData.current.humidity}%` },
+                  { emoji: '🌬️', label: 'Viento', value: `${weatherData.current.wind_kph} km/h` },
+                  { emoji: '☁️', label: 'Nubosidad', value: `${weatherData.current.cloud}%` },
+                  { emoji: '🌡️', label: 'Sensación', value: `${Math.round(weatherData.current.feelslike_c)}°C` },
+                  { emoji: '🌅', label: 'Amanecer', value: weatherData.forecast.forecastday[0].astro.sunrise },
+                  { emoji: '🌇', label: 'Atardecer', value: weatherData.forecast.forecastday[0].astro.sunset },
+                  { emoji: '🧭', label: 'Presión', value: `${weatherData.current.pressure_mb} hPa` },
+                  { emoji: '👁️', label: 'Visibilidad', value: `${weatherData.current.vis_km} km` },
+                  { emoji: '🔆', label: 'Índice UV', value: weatherData.current.uv },
+                  { emoji: '🌧️', label: 'Precipitación', value: `${weatherData.current.precip_mm} mm` },
+                  { emoji: '💦', label: 'Punto de rocío', value: `${weatherData.current.dewpoint_c ?? '-'}°C` },
+                ].map((item, index) => (
+                  <div key={index} className="detailCard">
+                    <span className="emoji">{item.emoji}</span>
+                    <div className="label">{item.label}</div>
+                    <div className="value">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="sevenDayForecast">
+              <h3 className="forecastsectionTitle">Próximos días</h3>
+              <div className="forecastsection" ref={forecastSectionRef}>
+                {weatherData.forecast.forecastday.slice(0, 7).map((day, index) => (
+                  <div
+                    key={day.date_epoch}
+                    className="detailCard forecastCard"
+                    onClick={(e) => handleForecastClick(day, e)}
+                  >
+                    <div className="dayName">
+                      {index === 0 ? '📅 Hoy' : new Date(day.date).toLocaleDateString('es-CL', { weekday: 'long' })}
+                    </div>
+                    <img
+                      src={`https:${day.day.condition.icon}`}
+                      alt={day.day.condition.text}
+                      className="forecastIcon"
+                    />
+                    <div className="label">{day.day.condition.text}</div>
+                    <div className="value">
+                      {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Tooltip de datos secundarios */}
+              {showForecastTooltip && selectedForecast && (
+                <div
+                  className="forecast-tooltip"
+                  ref={tooltipRef}
+                  style={{
+                    position: 'absolute',
+                    top: tooltipPosition.top,
+                    left: tooltipPosition.left,
+                    zIndex: 2000,
+                  }}
+                >
+                  <h4>
+                    {new Date(selectedForecast.date).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' })}
+                  </h4>
+                  <ul>
+                    <li><span className="tooltip-label">Humedad:</span>💧 {selectedForecast.day.avghumidity}%</li>
+                    <li><span className="tooltip-label">Viento:</span>🌬️ {selectedForecast.day.maxwind_kph} km/h</li>
+                    <li><span className="tooltip-label">Nubosidad:</span>☁️ {selectedForecast.day.daily_chance_of_cloud ?? '-'}%</li>
+                    <li><span className="tooltip-label">Sensación:</span>🌡️ {Math.round(selectedForecast.day.avgtemp_c)}°C</li>
+                    <li><span className="tooltip-label">Amanecer:</span>🌅 {selectedForecast.astro.sunrise}</li>
+                    <li><span className="tooltip-label">Atardecer:</span>🌇 {selectedForecast.astro.sunset}</li>
+                    <li><span className="tooltip-label">Presión:</span>🧭 {selectedForecast.day.pressure_mb ?? '-'} hPa</li>
+                    <li><span className="tooltip-label">Visibilidad:</span>👁️ {selectedForecast.day.avgvis_km ?? '-'} km</li>
+                    <li><span className="tooltip-label">UV:</span>🔆 {selectedForecast.day.uv}</li>
+                    <li><span className="tooltip-label">Precipitación:</span>🌧️ {selectedForecast.day.totalprecip_mm} mm</li>
+                    <li><span className="tooltip-label">Rocío:</span>💦 {selectedForecast.day.dewpoint_c ?? '-'}°C</li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
-};
-
-export default Dashboard;
+}

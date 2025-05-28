@@ -40,9 +40,9 @@ export default function Login() {
       console.log("Usuario autenticado:", data);
 
       toast.success("Inicio de sesión exitoso");
-      localStorage.setItem("token", data.token); // Guarda el token en localStorage
+      sessionStorage.setItem("token", data.token);
       setTimeout(() => {
-        router.push("/dashboard"); // Redirige al dashboard
+        router.push("/dashboard");
       }, 1500);
     } catch (err) {
       console.error("Error en el inicio de sesión:", err.message);
