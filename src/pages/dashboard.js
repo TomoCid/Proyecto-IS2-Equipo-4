@@ -79,6 +79,14 @@ export default function Dashboard() {
     }
   }, [router]);
 
+  // Cargar actividades del usuario al iniciar sesión
+  useEffect(() => {
+    if (!checkingAuth ,usuario) {
+      fetchUserActivities();
+    }
+  }, [checkingAuth, usuario]);
+  
+  // Intentar detectar ubicación inicial si no se ha hecho
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
       console.log("Intentando detección de ubicación inicial...");
@@ -619,18 +627,22 @@ export default function Dashboard() {
                     <div className="modal-agendar-icon">
                       <StarIcon />
                     </div>
-                    <select
-                      value={actividadSeleccionada}
-                      onChange={(e) => setActividadSeleccionada(e.target.value)}
-                      className="modal-agendar-select"
-                    >
-                      <option value="" disabled>Selecciona una actividad</option>
-                      <option value="Yoga">Yoga</option>
-                      <option value="Ciclismo">Ciclismo</option>
-                      <option value="Trekking">Trekking</option>
-                      <option value="Natación">Natación</option>
-                      <option value="Gimnasio">Gimnasio</option>
-                    </select>
+                      <select
+                        value={actividadSeleccionada}
+                        onChange={(e) => setActividadSeleccionada(e.target.value)}
+                        className="modal-agendar-select"
+                      >
+                        <option value="" disabled>Selecciona una actividad</option>
+                        {userActivities.length > 0 ? (
+                          userActivities.map(activity => (
+                            <option key={activity.id} value={activity.name}>
+                              {activity.name}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>No tienes actividades disponibles</option>
+                        )}
+                      </select>
                   </div>
 
                   <input
