@@ -146,7 +146,6 @@ export default function Dashboard() {
       showNotification('error', errorMsg);
       return;
     }
-
     setDetectStatus('loading');
     setDetectError(null);
     showNotification('loading', 'Detectando tu ubicación...');
@@ -700,7 +699,7 @@ export default function Dashboard() {
             <div className="sevenDayForecast">
               <h3 className="forecastsectionTitle">Próximos días</h3>
               <div className="forecastsection" ref={forecastSectionRef}>
-                {weatherData.forecast.forecastday.slice(0, 7).map((day, index) => (
+                {weatherData.forecast.forecastday.slice(1, 7).map((day, index) => (
                   <div
                     key={day.date_epoch}
                     className="detailCard forecastCard"
