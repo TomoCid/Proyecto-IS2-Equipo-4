@@ -1,3 +1,4 @@
+// pages/api/weather/[ciudad].js
 import weatherService from '@/app/weather/weatherService.js'; 
 
 export default async function handler(req, res) {
@@ -7,24 +8,25 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { ciudad } = req.query; // El nombre del archivo [ciudad].js hace que 'ciudad' esté en req.query
-        const { lang = 'es', days = '7' } = req.query; // Opciones desde query params
+        const { ciudad } = req.query; 
+        const { lang = 'es', days = '7' } = req.query; 
 
         if (!ciudad) {
             return res.status(400).json({ error: 'Nombre de ciudad requerido en la ruta. Ejemplo: /api/weather/Concepcion' });
         }
 
         const diasPronostico = parseInt(days, 10);
-        if (isNaN(diasPronostico) || diasPronostico < 1 || diasPronostico > 10) { // WeatherAPI permite hasta 10 (plan gratuito 3)
+        if (isNaN(diasPronostico) || diasPronostico < 1 || diasPronostico > 10) {
              return res.status(400).json({ error: 'El parámetro "days" debe ser un número entre 1 y 10.' });
         }
 
+        
         const climaData = await weatherService.obtenerClimaCompleto(ciudad, diasPronostico, lang);
 
         if (climaData) {
             res.status(200).json(climaData);
         } else {
-            res.status(404).json({ error: `No se pudo obtener el clima para ${ciudad}. Revisa los logs del servidor.` });
+            res.status(404).json({ error: `No se pudo obtener el clima para ${ciudad}. Puede que la ciudad no exista o haya un problema con la API externa. Revisa los logs del servidor.` });
         }
 
     } catch (error) {

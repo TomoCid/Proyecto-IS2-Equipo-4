@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [detectError, setDetectError] = useState(null);
   const [inputCiudad, setInputCiudad] = useState('');
   const [currentCiudad, setCurrentCiudad] = useState(null);
+  const [initialLocationAttempted, setInitialLocationAttempted] = useState(false);
 
   // Estados de actividades
   const [showSearch, setShowSearch] = useState(false);
@@ -77,6 +78,14 @@ export default function Dashboard() {
     }
   }, [router]);
 
+  useEffect(() => {
+    if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
+      console.log("Intentando detección de ubicación inicial...");
+      handleDetectLocation(); 
+      setInitialLocationAttempted(true); 
+    }
+  }, [checkingAuth, usuario, initialLocationAttempted, detectedLocation, currentCiudad]);
+
   // Función para cerrar sesión
   const handleLogout = () => {
     if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
@@ -100,12 +109,14 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (checkingAuth) return;
+
     if (detectedLocation?.lat && detectedLocation?.lon) {
       fetchWeather(detectedLocation.lat, detectedLocation.lon);
     } else if (currentCiudad) {
       fetchWeather(null, null, currentCiudad);
     }
-  }, [detectedLocation, currentCiudad]);
+  }, [detectedLocation, currentCiudad, checkingAuth]); 
 
   async function fetchWeather(lat, lon, ciudad) {
     setLoading(true);
@@ -144,17 +155,20 @@ export default function Dashboard() {
       const errorMsg = 'Tu navegador no soporta geolocalización o está desactivada';
       setDetectError(errorMsg);
       showNotification('error', errorMsg);
+      setDetectStatus('error');
       return;
     }
     setDetectStatus('loading');
     setDetectError(null);
-    showNotification('loading', 'Detectando tu ubicación...');
+    //showNotification('loading', 'Detectando tu ubicación...');
 
     const geoOptions = {
       enableHighAccuracy: true,
-      timeout: 15000,
+      timeout: 10000,
       maximumAge: 0
     };
+
+    setCurrentCiudad(null);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -162,7 +176,12 @@ export default function Dashboard() {
         
         if (typeof latitude !== 'number' || typeof longitude !== 'number' || 
             isNaN(latitude) || isNaN(longitude)) {
-          throw new Error('Coordenadas inválidas obtenidas');
+          const errMsg = 'Coordenadas inválidas obtenidas de geolocalización.';
+          setDetectError(errMsg);
+          showNotification('error', errMsg);
+          setDetectStatus('error');
+          console.error(errMsg);
+          return; 
         }
 
         setDetectedLocation({
@@ -170,8 +189,9 @@ export default function Dashboard() {
           lon: longitude
         });
         setDetectStatus('success');
-        showNotification('success', 'Ubicación detectada correctamente');
-        fetchWeather(latitude, longitude);
+        if (initialLocationAttempted) { 
+            showNotification('success', 'Ubicación detectada correctamente');
+        }
       },
       (error) => {
         let errorMessage = 'Error al obtener la ubicación';
@@ -191,7 +211,7 @@ export default function Dashboard() {
         }
         
         setDetectError(errorMessage);
-        showNotification('error', errorMessage);
+        showNotification('error', errorMessage); 
         setDetectStatus('error');
         console.error('Error en geolocalización:', error);
       },
@@ -210,9 +230,11 @@ export default function Dashboard() {
       showNotification('error', 'Por favor ingresa una ciudad');
       return;
     }
+    setDetectedLocation(null);
     setCurrentCiudad(ciudad);
     setShowSearch(false);
     setInputCiudad('');
+    setInitialLocationAttempted(true);
   }
 
   const loadScheduledActivities = async () => {
@@ -303,7 +325,11 @@ export default function Dashboard() {
   };
 
   if (checkingAuth) {
-    return null;
+    return ( 
+      <div className="flex justify-center items-center min-h-screen">
+        <p>Verificando sesión...</p> {/* O un spinner */}
+      </div>
+    );
   }
 
   if (!usuario) {
@@ -649,12 +675,21 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && (
-          <div className="welcome-message">
-            <h2>Consulta el clima de cualquier ciudad</h2>
-            <p>Usa el buscador o el botón de ubicación para comenzar</p>
-          </div>
-        )}
+         {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && detectStatus === 'idle' && (
+            <div className="welcome-message">
+              <h2>Consulta el clima de cualquier ciudad</h2>
+              <p>Intentando obtener tu ubicación actual o usa el buscador...</p>
+            </div>
+          )}
+      
+          {/* Mostrar mensaje si la detección inicial falló y no hay ciudad buscada */}
+          {!weatherData && !loading && !currentCiudad && detectStatus === 'error' && initialLocationAttempted && (
+            <div className="welcome-message">
+              <h2>No se pudo obtener tu ubicación automáticamente</h2>
+              <p>Por favor, usa el buscador para consultar el clima de una ciudad, o intenta detectar tu ubicación de nuevo.</p>
+              {detectError && <p className="text-red-500 mt-2">{detectError}</p>}
+            </div>
+          )}
 
         {weatherData && !showCalendar && !showActivities && !agendarModalAbierto && (
           <div className="weatherContent">
