@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [showActivities, setShowActivities] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
+  const [userActivities, setUserActivities] = useState([]);
   
   // Estados para el modal de agendar
   const [actividadSeleccionada, setActividadSeleccionada] = useState("");
@@ -254,6 +255,23 @@ export default function Dashboard() {
     });
   };
 
+  // Funcion para cargar actividades del usuario
+  const fetchUserActivities = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) return;
+      const decoded = jwtDecode(token);
+      const userId = decoded.id || decoded.user_id; // Ajusta según tu JWT
+
+      const res = await fetch(`/api/users/actividades_usuario?userId=${userId}`);
+      if (!res.ok) throw new Error('No se pudieron cargar las actividades');
+      const data = await res.json();
+      setUserActivities(data.activities || []);
+    } catch (err) {
+      showNotification('error', err.message);
+    }
+  };
+
   // Función para guardar actividad desde el modal de agendar
   const handleAgendarActividad = () => {
     if (!actividadSeleccionada) {
@@ -431,6 +449,7 @@ export default function Dashboard() {
               onClick={() => {
                 setShowActivities(!showActivities);
                 setShowAddActivity(false);
+                if (!showActivities) fetchUserActivities();
               }}
             >
               <FiBookmark className="sidebar-icon" />
@@ -572,21 +591,17 @@ export default function Dashboard() {
               <h2>Mis Actividades</h2>
               
               <div className="activities-list-container">
-                {scheduledActivities.length > 0 ? (
-                  scheduledActivities.map(activity => (
+                {userActivities.length > 0 ? (
+                  userActivities.map(activity => (
                     <div key={activity.id} className="activity-item">
-                      <h3>{activity.title}</h3>
+                      <h3>{activity.name}</h3>
                       {activity.description && (
                         <p>{activity.description}</p>
                       )}
-                      <div className="activity-meta">
-                        <span><FiCalendar /> {new Date(activity.date).toLocaleDateString('es-ES')}</span>
-                        <span><FiClock /> {activity.time}</span>
-                      </div>
                     </div>
                   ))
                 ) : (
-                  <p className="no-activities">No tienes actividades programadas</p>
+                  <p className="no-activities">No tienes actividades asociadas</p>
                 )}
               </div>
             </div>
