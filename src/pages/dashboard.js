@@ -286,6 +286,18 @@ export default function Dashboard() {
       showNotification('error', 'Por favor selecciona una actividad');
       return;
     }
+    if (horaInicio && horaTermino) {
+      const [inicioHoras, inicioMinutos] = horaInicio.split(':').map(Number);
+      const [terminoHoras, terminoMinutos] = horaTermino.split(':').map(Number);
+
+      const inicioEnMinutos = inicioHoras * 60 + inicioMinutos;
+      const terminoEnMinutos = terminoHoras * 60 + terminoMinutos;
+
+      if (terminoEnMinutos <= inicioEnMinutos) {
+        showNotification("error", "La hora de término debe ser posterior a la de inicio");
+        return;
+      }    
+    }
 
     const nuevaActividad = {
       id: Date.now(),

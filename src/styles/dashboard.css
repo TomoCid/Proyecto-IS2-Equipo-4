@@ -80,7 +80,7 @@ body {
   align-items: center;
   justify-content: space-between;
   box-shadow: var(--shadow);
-  z-index: 1000;
+  z-index: 2000;
   max-width: 350px;
   animation: slideIn 0.3s ease-out;
   border-left: 4px solid transparent;
@@ -452,6 +452,8 @@ body {
   backdrop-filter: blur(5px);
   animation: fadeIn 0.3s ease-out;
 }
+
+
 
 .modal-content {
   background: var(--white);
