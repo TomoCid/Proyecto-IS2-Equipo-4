@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiMapPin, FiCalendar, FiX, FiCheck, FiAlertCircle, FiBookmark, FiClock, FiPlus, FiSettings } from 'react-icons/fi';
+import { MdSettings } from 'react-icons/md';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useRouter } from 'next/router';
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [scheduledActivities, setScheduledActivities] = useState([]);
   const [showActivities, setShowActivities] = useState(false);
+  const [showEditPreferences, setShowEditPreferences] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
   const [userActivities, setUserActivities] = useState([]);
@@ -42,6 +44,9 @@ export default function Dashboard() {
   const [fechaActividad, setFechaActividad] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaTermino, setHoraTermino] = useState("");
+
+  // estados del modal para editar preferencias
+  const [activityToEdit, setActivityToEdit] = useState(null);
 
   // StarIcon para el modal de agendar
   const StarIcon = () => (
@@ -104,6 +109,12 @@ export default function Dashboard() {
       router.replace('/');
     }
   };
+
+  const handleEditPreferences = (activity) => {
+    setShowEditPreferences(true);
+    setActivityToEdit(activity);
+    console.log("actividad a editar: " + activity);
+  }
 
   // Funciones para el clima
   const activitiesForSelectedDate = scheduledActivities.filter(activity => {
@@ -608,24 +619,45 @@ export default function Dashboard() {
                 <FiX />
               </button>
               
-              <h2>Mis Actividades</h2>
-              
+              <h2>Mis Actividades</h2>        
               <div className="activities-list-container">
                 {userActivities.length > 0 ? (
                   userActivities.map(activity => (
-                    <div key={activity.id} className="activity-item">
+                    <div key={activity.id} className="activity-item relative">
                       <h3>{activity.name}</h3>
                       {activity.description && (
                         <p>{activity.description}</p>
                       )}
+                      <button
+                        className="settings-button absolute top-2 right-2"
+                        onClick={() => handleEditPreferences(activity)}
+                      >
+                        <MdSettings size={20} />
+                      </button>
                     </div>
-                  ))
-                ) : (
-                  <p className="no-activities">No tienes actividades asociadas</p>
-                )}
+                      ))
+                    ) : (
+                      <p className="no-activities">No tienes actividades asociadas</p>
+                    )}
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de edición de preferencias climáticas */}
+        {showEditPreferences && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>{activityToEdit.name}</h2>
+              <button
+                className="modal-agendar-button modal-agendar-button-secondary"
+                onClick={() => setShowEditPreferences(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+          
         )}
 
         {/* Modal para Agendar Actividad */}
