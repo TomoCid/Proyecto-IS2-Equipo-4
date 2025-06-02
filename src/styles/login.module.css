@@ -1,73 +1,114 @@
-
-.wrapper {
-    background-color: #f9f0f7;
-    color: #000000; 
-    width: 100%;
-    min-height: 100vh;
+.background {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #eaf6fb 0%, #cbe7f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.loginContainer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding-top: 50px;
-    border-radius: 15px;
-    background-color: #b5aab5;
-    height: 60vh;
-    width: 60vh;
-    flex-direction: column;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    overflow: hidden;
-    border: 3px solid #aa9baa;
+.centerContainer {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.welcomeText {
-    font-weight: bold;
-    font-size: 30px;
-    margin-bottom: 30px;
-    justify-content:left;
+.loginCard {
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: 0 8px 32px 0 rgba(33, 147, 176, 0.13);
+  padding: 1.5rem 1.2rem 1.2rem 1.2rem;   
+  width: 100%;
+  max-width: 300px;                      
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.7s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(30px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+.welcomeText h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2193b0;
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .inputField {
-    height: 40px;
-    padding: 5px;
-    color: black;
-    background-color: white;
-    margin-bottom: 15px;
-    border-radius: 20px; 
-    border: 2px solid #aa9baa;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+color: #17627a; /* Azul oscuro, bien visible */
+  background: #f9fafd;
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.inputField:focus {
+  border: 1.5px solid #2193b0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.07);
+}
+
+.inputField::placeholder {
+  color: #2193b0;         
+  opacity: 1;             
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 .nextButton {
-    padding: 12px; 
-    background-color: #6475c3;
-    color: white; 
-    border: none;
-    border-radius: 8px; 
-    cursor: pointer;
-    width: 300px; 
-    height: 80px; 
-    box-sizing: border-box; 
+  width: 100%;
+  padding: 0.9rem 0;
+  background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.10);
 }
 
 .nextButton:hover {
-    background-color: #425298;
+  background: linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%);
+  transform: translateY(-2px) scale(1.03);
 }
 
 .registerText {
-    margin-top: 20px;
-    font-size: 14px;
-  }
-  
-  .registerLink {
-    color: #6475c3;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-  
-  .registerLink:hover {
-    color: #425298;
-  }
+  color: #666;
+  font-size: 0.98rem;
+  text-align: center;
+}
+
+.registerLink {
+  color: #2193b0;
+  font-weight: 700;
+  cursor: pointer;
+  transition: text-decoration 0.2s;
+  text-decoration: underline;
+}
+
+.registerLink:hover {
+  color: #17627a;
+  text-decoration: underline wavy;
+}

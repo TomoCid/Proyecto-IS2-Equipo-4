@@ -55,28 +55,31 @@ export default function Login() {
     router.push("/signup");
   }
 
-  return (
-    <div className={`${montserrat.className} ${styles.wrapper}`}>
-      <div className={styles.loginContainer}>
+return (
+  <div className={`${montserrat.className} ${styles.background}`}>
+    <div className={styles.centerContainer}>
+      <div className={styles.loginCard}>
         <div className={styles.welcomeText}>
           <h1>Bienvenido</h1>
+          <p className={styles.subtitle}>Inicia sesión para continuar</p>
         </div>
         <input
           className={styles.inputField}
           type="text"
-          placeholder="email@dominio.com"
+          placeholder="Correo electrónico"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoFocus
         />
         <input
           className={styles.inputField}
           type="password"
-          placeholder="contraseña"
+          placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <button className={styles.nextButton} onClick={handleLogin}>
-          Siguiente
+          Ingresar
         </button>
         <p className={styles.registerText}>
           ¿No tienes una cuenta?{" "}
@@ -98,5 +101,6 @@ export default function Login() {
         />
       </div>
     </div>
-  );
+  </div>
+);
 }
