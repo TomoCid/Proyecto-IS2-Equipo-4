@@ -5,6 +5,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
+import { FiThumbsUp, FiThumbsDown, FiInfo } from 'react-icons/fi';
 import '../styles/dashboard.css';
 
 
@@ -54,6 +55,11 @@ export default function Dashboard() {
   // estados del modal para editar preferencias
   const [activityToEdit, setActivityToEdit] = useState(null);
 
+  const [activityRecommendations, setActivityRecommendations] = useState([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [errorRecommendations, setErrorRecommendations] = useState(null);
+  const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
+  
   // StarIcon para el modal de agendar
   const StarIcon = () => (
     <svg width="20" height="19" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,35 +70,50 @@ export default function Dashboard() {
 
   // Verificar autenticación al cargar
   useEffect(() => {
+    console.log("[AUTH_EFFECT] Running authentication check effect. Current user:", usuario);
     const token = sessionStorage.getItem('token');
     if (!token) {
-      router.replace('/');
+      console.log("[AUTH_EFFECT] No token found, redirecting.");
+      if (router.pathname !== '/') router.replace('/'); 
+      setCheckingAuth(false);
     } else {
+      let currentDecodedUserId = null;
       try {
         const decoded = jwtDecode(token);
-        setUsuario({
-          username: decoded.username || 'Usuario',
-          email: decoded.email || 'usuario@email.com'
-        });
-        setCheckingAuth(false);
+        currentDecodedUserId = decoded.id || decoded.user_id;
+        console.log("[AUTH_EFFECT] Token decoded. Decoded User ID:", currentDecodedUserId);
 
-        // Cargar actividades guardadas por usuario
+        if (!usuario || (usuario && String(usuario.id) !== String(currentDecodedUserId))) {
+          console.log("[AUTH_EFFECT] Setting/Updating user state.");
+          setUsuario({
+            id: currentDecodedUserId, 
+            username: decoded.username || 'Usuario',
+            email: decoded.email || 'usuario@email.com'
+          });
+        } else {
+          console.log("[AUTH_EFFECT] User already set and ID matches, no user state update needed.");
+        }
+
         const actividadesKey = `actividades_${decoded.email}`;
         const savedActivities = localStorage.getItem(actividadesKey);
         if (savedActivities) {
-          setScheduledActivities(JSON.parse(savedActivities));
+          try {
+            setScheduledActivities(JSON.parse(savedActivities));
+          } catch (e) { console.error("Error parsing saved activities from localStorage", e); }
         }
       } catch (err) {
-        console.error('Error decodificando token:', err);
+        console.error('[AUTH_EFFECT] Error processing token:', err);
         sessionStorage.removeItem('token');
-        router.replace('/');
+        if (router.pathname !== '/') router.replace('/');
+      } finally {
+        setCheckingAuth(false);
       }
     }
   }, [router]);
 
   // Cargar actividades del usuario al iniciar sesión
   useEffect(() => {
-    if (!checkingAuth ,usuario) {
+    if (!checkingAuth && usuario) { 
       fetchUserActivities();
     }
   }, [checkingAuth, usuario]);
@@ -100,7 +121,6 @@ export default function Dashboard() {
   // Intentar detectar ubicación inicial si no se ha hecho
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
-      console.log("Intentando detección de ubicación inicial...");
       handleDetectLocation(); 
       setInitialLocationAttempted(true); 
     }
@@ -119,7 +139,6 @@ export default function Dashboard() {
   const handleEditPreferences = (activity) => {
     setShowEditPreferences(true);
     setActivityToEdit(activity);
-    console.log("actividad a editar: " + activity);
   }
 
   async function handleRegistrarAgenda() {
@@ -216,6 +235,73 @@ export default function Dashboard() {
       fetchWeather(null, null, currentCiudad);
     }
   }, [detectedLocation, currentCiudad, checkingAuth]); 
+
+  useEffect(() => {
+    const currentUserId = usuario?.id; // Extraer el ID del usuario
+
+    if (currentUserId) { // Solo proceder si tenemos un ID de usuario
+      const controller = new AbortController(); // Crear un AbortController
+      const signal = controller.signal;
+
+      const fetchRecommendations = async () => {
+        setLoadingRecommendations(true);
+        setErrorRecommendations(null);
+        try {
+          const token = sessionStorage.getItem('token');
+          if (!token) {
+            setErrorRecommendations("Token de autenticación no encontrado.");
+            setActivityRecommendations([]); // Limpiar en caso de error de token
+            return; // Salir temprano
+          }
+          
+          const apiUrl = `/api/users/${currentUserId}/agenda/recommendations`; 
+
+          const res = await fetch(apiUrl, {
+            signal,
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+
+          if (!res.ok) {
+            let errorData = { error: `Error de la API: ${res.status} ${res.statusText}` };
+            try {
+              errorData = await res.json();
+            } catch (parseError) {
+              console.warn("[FRONTEND] Could not parse error response JSON:", parseError);
+            }
+            console.error("[FRONTEND] API Error Data:", errorData);
+            throw new Error(errorData.error || `Fallo al obtener recomendaciones: ${res.status}`);
+          }
+
+          const data = await res.json();
+          setActivityRecommendations(data.recommendations || []);
+          setErrorRecommendations(null); // Limpiar error si fue exitoso
+
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            console.log('[FRONTEND] Fetch aborted');
+          } else {
+            console.error("[FRONTEND] Error in fetchRecommendations (catch block):", err);
+            setErrorRecommendations(err.message || "Error al cargar recomendaciones.");
+          }
+          setActivityRecommendations([]);
+        } finally {
+          setLoadingRecommendations(false);
+        }
+      };
+      fetchRecommendations();
+      return () => {
+        controller.abort(); 
+      };
+    } else {
+      setActivityRecommendations([]);
+      setLoadingRecommendations(false);
+      setErrorRecommendations(null);
+    }
+  }, [usuario?.id, forceRefreshRecommendations]);
 
   async function fetchWeather(lat, lon, ciudad) {
     setLoading(true);
@@ -356,17 +442,27 @@ export default function Dashboard() {
 
   // Funcion para cargar actividades del usuario
   const fetchUserActivities = async () => {
+    console.log("[USER_ACTIVITIES] Fetching user activities. Current user state:", usuario);
+    if (!usuario || !usuario.id) { 
+        console.warn("[USER_ACTIVITIES] Skipping fetch, user or user.id is not defined.");
+        return;
+    }
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
-      const decoded = jwtDecode(token);
-      const userId = decoded.id || decoded.user_id; // Ajusta según tu JWT
 
+      const userId = usuario.id; 
+
+      console.log("[USER_ACTIVITIES] Fetching for userId:", userId);
       const res = await fetch(`/api/users/actividades_usuario?userId=${userId}`);
-      if (!res.ok) throw new Error('No se pudieron cargar las actividades');
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("[USER_ACTIVITIES] API Error:", errorText);
+        throw new Error('No se pudieron cargar las actividades del usuario');
+      }
       const data = await res.json();
+      console.log("[USER_ACTIVITIES] Data received:", data);
       setUserActivities(data.activities || []);
     } catch (err) {
+      console.error("[USER_ACTIVITIES] Error:", err);
       showNotification('error', err.message);
     }
   };
@@ -390,6 +486,11 @@ export default function Dashboard() {
       }    
     }
 
+    const handleCloseAgendaModal = () => {
+      setShowCalendar(false); 
+      setForceRefreshRecommendations(prev => prev + 1); 
+    };
+
     const nuevaActividad = {
       id: Date.now(),
       title: actividadSeleccionada,
@@ -406,7 +507,7 @@ export default function Dashboard() {
     
     setAgendarModalAbierto(false);
     showNotification('success', 'Actividad agendada correctamente');
-    
+    setForceRefreshRecommendations(prev => prev + 1);
     // Resetear campos
     setActividadSeleccionada("");
     setCiudadActividad("");
@@ -468,7 +569,6 @@ export default function Dashboard() {
       </div>
     );
   }
-console.log("scheduledActivities:", scheduledActivities);
   return (
     <div className="appWrapper">
       {/* Botón de ajustes en la esquina superior derecha */}
@@ -628,9 +728,12 @@ console.log("scheduledActivities:", scheduledActivities);
             <div className="calendar-modal">
               <div className="modal-header">
                 <h2>Mis Actividades Agendadas</h2>
-                <button 
+                <button
                   className="modal-close-button"
-                  onClick={() => setShowCalendar(false)}
+                  onClick={() => {
+                    setShowCalendar(false);
+                    setForceRefreshRecommendations(prev => prev + 1); // Actualizar aquí
+                  }}
                   aria-label="Cerrar calendario"
                 >
                   <FiX className="close-icon" />
@@ -887,6 +990,7 @@ console.log("scheduledActivities:", scheduledActivities);
                 ))}
               </div>
             </div>
+
             <div className="sevenDayForecast">
               <h3 className="forecastsectionTitle">Próximos días</h3>
               <div className="forecastsection" ref={forecastSectionRef}>
@@ -942,6 +1046,120 @@ console.log("scheduledActivities:", scheduledActivities);
                 </div>
               )}
             </div>
+
+            <div>
+              {/* Activity Recommendations Section */}
+              {!showCalendar && !showActivities && !agendarModalAbierto && (
+                <div className="activityRecommendationsSection">
+                  <h3 className="recommendationsTitle">Recomendaciones de Actividades Agendadas</h3>
+                  {loadingRecommendations && <p>Cargando recomendaciones...</p>}
+                  {errorRecommendations && <p className="statusBubble error">Error: {errorRecommendations}</p>}
+                  
+                  {!loadingRecommendations && !errorRecommendations && activityRecommendations.length === 0 && (
+                    <p>No hay recomendaciones disponibles o no tienes actividades próximas agendadas.</p>
+                  )}
+
+                  {!loadingRecommendations && !errorRecommendations && activityRecommendations.length > 0 && (
+                    <div className="recommendationsGrid">
+                      {activityRecommendations.map(rec => {
+
+                        return (
+                          <div key={rec.id} className={`recommendationCard ${rec.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
+                            <div className="recommendationHeader">
+                              <h4>{rec.activity_name}</h4> {/* Asegúrate de usar rec.activity_name si así viene del backend */}
+                              <span className="recommendationDate">
+                                {(() => {
+                                  try {
+                                    // Asegurarse que rec.fecha es un string o se puede convertir a uno en formato YYYY-MM-DD
+                                    let fechaStr;
+                                    if (typeof rec.fecha === 'string') {
+                                      fechaStr = rec.fecha.split('T')[0]; // Tomar solo la parte de la fecha si es un ISO string completo
+                                    } else if (rec.fecha && typeof rec.fecha.toISOString === 'function') {
+                                      fechaStr = rec.fecha.toISOString().split('T')[0];
+                                    } else {
+                                      console.error("Formato de rec.fecha no reconocido:", rec.fecha);
+                                      return "Fecha desconocida";
+                                    }
+
+                                    if (!rec.hora_inicio || typeof rec.hora_inicio !== 'string') {
+                                      console.error("Formato de rec.hora_inicio no reconocido o ausente:", rec.hora_inicio);
+                                      return "Hora desconocida";
+                                    }
+
+                                    const [year, month, day] = fechaStr.split('-');
+                                    const [hours, minutes] = rec.hora_inicio.split(':');
+
+                                    // Validar que todos los componentes son números antes de crear el Date
+                                    if ([year, month, day, hours, minutes].some(val => isNaN(parseInt(val)))) {
+                                        console.error("Componente de fecha/hora inválido:", {year, month, day, hours, minutes});
+                                        return "Componentes de fecha/hora inválidos";
+                                    }
+
+                                    const activityDateTime = new Date(
+                                      parseInt(year),
+                                      parseInt(month) - 1, // Meses son 0-indexados
+                                      parseInt(day),
+                                      parseInt(hours),
+                                      parseInt(minutes)
+                                    );
+                                    
+                                    console.log("Parsed activityDateTime:", activityDateTime);
+
+
+                                    if (isNaN(activityDateTime.getTime())) {
+                                      console.error("activityDateTime resultó en Invalid Date. Componentes:", {year, month, day, hours, minutes});
+                                      return "Fecha inválida (construcción)";
+                                    }
+
+                                    return activityDateTime.toLocaleString('es-ES', {
+                                      weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                    });
+
+                                  } catch (e) {
+                                    console.error("Error formateando fecha para recomendación:", e, "Datos originales:", {fecha: rec.fecha, hora: rec.hora_inicio});
+                                    return "Error de fecha";
+                                  }
+                                })()}
+                              </span>
+                            </div>
+                            
+                             <>
+                              <div className="recommendationStatus">
+                                {rec.weatherSuitability.isSuitable ? (
+                                  <FiThumbsUp className="statusIcon suitableIcon" />
+                                ) : (
+                                  <FiThumbsDown className="statusIcon unsuitableIcon" />
+                                )}
+                                <span>
+                                  {rec.weatherSuitability.isSuitable ? "Adecuado para realizar" : "No recomendado"}
+                                </span>
+                              </div>
+                              
+                              {/* Solo mostrar razones si no es adecuado O si es adecuado y hay una razón específica (como la genérica) */}
+                              {(!rec.weatherSuitability.isSuitable || (rec.weatherSuitability.isSuitable && rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.length > 0)) && (
+                                <div className="recommendationReasons">
+                                  <FiInfo className="reasonInfoIcon" />
+                                  <ul>
+                                    {rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.map((reason, index) => (
+                                      <li key={index}>{reason}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+
+
+
           </div>
         )}
       </main>

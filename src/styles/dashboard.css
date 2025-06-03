@@ -1273,3 +1273,114 @@ body {
     gap: 1.5rem;
   }
 }
+
+.activityRecommendationsSection {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #f9f9f9; /* Light background for the section */
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.recommendationsTitle {
+  font-size: 1.5em;
+  color: #333;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.recommendationsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.recommendationCard {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid #ccc; /* Default border */
+  transition: transform 0.2s ease-in-out;
+}
+
+.recommendationCard:hover {
+    transform: translateY(-5px);
+}
+
+.recommendationCard.suitable {
+  border-left-color: #4CAF50; /* Green for suitable */
+}
+
+.recommendationCard.unsuitable {
+  border-left-color: #F44336; /* Red for unsuitable */
+}
+
+.recommendationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.recommendationHeader h4 {
+  margin: 0;
+  font-size: 1.1em;
+  color: #333;
+}
+
+.recommendationDate {
+  font-size: 0.85em;
+  color: #777;
+}
+
+.recommendationStatus {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.statusIcon {
+  margin-right: 8px;
+  font-size: 1.4em;
+}
+
+.statusIcon.suitableIcon {
+  color: #4CAF50;
+}
+
+.statusIcon.unsuitableIcon {
+  color: #F44336;
+}
+
+.recommendationReasons {
+  font-size: 0.9em;
+  color: #555;
+  margin-top: 10px;
+  padding-left: 5px;
+  border-left: 2px solid #efefef;
+}
+.recommendationReasons .reasonInfoIcon {
+  margin-right: 5px;
+  color: #007bff; /* Or another distinct color */
+  vertical-align: middle;
+}
+
+.recommendationReasons ul {
+  list-style-type: none;
+  padding-left: 5px;
+  margin: 0;
+}
+
+.recommendationReasons li {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.recommendationLocation {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 10px;
+}
