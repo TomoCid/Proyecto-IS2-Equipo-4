@@ -12,19 +12,62 @@ const pool = new Pool({
  * @param {object} entryData - Datos de la nueva entrada.
  * @param {number} entryData.userId - ID del usuario.
  * @param {number} entryData.activityId - ID de la actividad.
- * @param {number|null} entryData.periodicidad - Periodicidad en días (o null).
+ * @param {number} [entryData.periodicidad=0] - Periodicidad en días.
  * @param {string} entryData.fecha - Fecha (YYYY-MM-DD).
  * @param {string} entryData.horaInicio - Hora de inicio (HH:MM:SS).
  * @param {string} entryData.horaFin - Hora de fin (HH:MM:SS).
  * @param {string|null} entryData.notes - Notas.
  * @param {number|null} entryData.latitude - Latitud.
  * @param {number|null} entryData.longitude - Longitud.
- * @param {boolean} entryData.reminderEnabled - Recordatorio activado.
+ * @param {boolean} [entryData.reminderEnabled=false] - Recordatorio activado.
  * @param {number|null} entryData.reminderOffsetMinutes - Minutos de antelación del recordatorio.
+ * @param {number|null} entryData.minTemp
+ * @param {number|null} entryData.maxTemp
+ * @param {number|null} entryData.maxWindSpeed
+ * @param {number|null} entryData.maxPrecipitationProbability
+ * @param {number|null} entryData.maxPrecipitationIntensity
+ * @param {boolean} [entryData.requiresNoPrecipitation=false]
+ * @param {number|null} entryData.maxUv
  * @returns {Promise<object>} La entrada de agenda creada.
  */
 export async function createAgendaEntry(entryData) {
   const {
+    userId,
+    activityId,
+    periodicidad = 0,
+    fecha,
+    horaInicio,
+    horaFin,
+    notes = null,
+    latitude = null,
+    longitude = null,
+    reminderEnabled = false,
+    reminderOffsetMinutes = null,
+    minTemp = null,
+    maxTemp = null,
+    maxWindSpeed = null,
+    maxPrecipitationProbability = null,
+    maxPrecipitationIntensity = null,
+    requiresNoPrecipitation = false,
+    maxUv = null,
+  } = entryData;
+
+  const query = `
+    INSERT INTO "Agenda" (
+      "user_id", "activity_id", "periodicidad", "fecha", "hora_inicio", "hora_fin", "notes",
+      "location_latitude", "location_longitude",
+      "reminder_enabled", "reminder_offset_minutes",
+      "min_temp", "max_temp", "max_wind_speed", "max_precipitation_probability",
+      "max_precipitation_intensity", "requires_no_precipitation", "max_uv"
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7,
+      $8, $9,
+      $10, $11,
+      $12, $13, $14, $15,
+      $16, $17, $18
+    ) RETURNING *;
+  `;
+  const values = [
     userId,
     activityId,
     periodicidad,
@@ -36,21 +79,13 @@ export async function createAgendaEntry(entryData) {
     longitude,
     reminderEnabled,
     reminderOffsetMinutes,
-  } = entryData;
-
-  const query = `
-    INSERT INTO "Agenda" (
-      "user_id", "activity_id", "periodicidad", "fecha", "hora_inicio",
-      "hora_fin", "notes", "location_latitude", "location_longitude",
-      "reminder_enabled", "reminder_offset_minutes"
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) RETURNING *;
-  `;
-  const values = [
-    userId, activityId, periodicidad, fecha, horaInicio,
-    horaFin, notes, latitude, longitude,
-    reminderEnabled, reminderOffsetMinutes,
+    minTemp,
+    maxTemp,
+    maxWindSpeed,
+    maxPrecipitationProbability,
+    maxPrecipitationIntensity,
+    requiresNoPrecipitation,
+    maxUv,
   ];
 
   const client = await pool.connect();
