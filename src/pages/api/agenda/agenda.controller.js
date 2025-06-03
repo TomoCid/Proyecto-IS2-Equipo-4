@@ -6,7 +6,7 @@ import { createAgendaEntry } from '@/app/agenda/consultas-agenda';
  */
 export async function handleGetUserAgenda(req, res) {
   try {
-    const userId = parseInt(req.params.userId, 10); 
+    const userId = parseInt(req.query.userId, 10); 
 
     if (isNaN(userId)) {
       return res.status(400).json({ error: 'User ID inválido.' });
@@ -27,7 +27,7 @@ export async function handleGetUserAgenda(req, res) {
  */
 export async function handleCreateAgendaEntry(req, res) {
   try {
-    const userId = parseInt(req.params.userId, 10);
+    const userId = parseInt(req.query.userId, 10);
     const entryData = req.body; 
 
     if (isNaN(userId)) {

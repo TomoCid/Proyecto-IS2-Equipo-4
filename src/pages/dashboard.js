@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
 import '../styles/dashboard.css';
 
+
 export default function Dashboard() {
   const router = useRouter();
   
@@ -37,6 +38,11 @@ export default function Dashboard() {
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [agendarModalAbierto, setAgendarModalAbierto] = useState(false);
   const [userActivities, setUserActivities] = useState([]);
+  const activitiesForSelectedDate = scheduledActivities.filter(activity => {
+    const activityDate = new Date(activity.fecha).toDateString();
+    const selectedDate = new Date(calendarDate).toDateString();
+    return activityDate === selectedDate;
+  });
   
   // Estados para el modal de agendar
   const [actividadSeleccionada, setActividadSeleccionada] = useState("");
@@ -116,12 +122,85 @@ export default function Dashboard() {
     console.log("actividad a editar: " + activity);
   }
 
-  // Funciones para el clima
-  const activitiesForSelectedDate = scheduledActivities.filter(activity => {
-    const activityDate = new Date(activity.date).toDateString();
-    const selectedDate = new Date(calendarDate).toDateString();
-    return activityDate === selectedDate;
-  });
+  async function handleRegistrarAgenda() {
+    if (!actividadSeleccionada || !fechaActividad || !horaInicio || !horaTermino) {
+      showNotification('error', 'Completa los campos obligatorios');
+      return;
+    }
+
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      showNotification('error', 'Sesión expirada');
+      return;
+    }
+    const decoded = jwtDecode(token);
+    const userId = decoded.id || decoded.user_id;
+    
+    let lat = null;
+    let lon = null;
+    if (ciudadActividad) {
+      const res = await fetch(`/api/weather/${encodeURIComponent(ciudadActividad)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.location) {
+          lat = data.location.lat;
+          lon = data.location.lon;
+        }
+      }
+    }
+    const entryData = {
+      activityId: Number(actividadSeleccionada),
+      fecha: fechaActividad,
+      horaInicio,
+      horaFin: horaTermino,
+      notes: ciudadActividad || null,
+      latitude: lat,
+      longitude: lon,
+    };
+
+    try {
+      const res = await fetch(`/api/agenda/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entryData),
+      });
+
+      if (!res.ok) {
+        let errorMsg = 'Error al registrar agenda';
+        const text = await res.text();
+        try {
+          const errorData = JSON.parse(text);
+          errorMsg = errorData.error || errorMsg;
+        } catch (jsonErr) {
+          errorMsg = text || errorMsg;
+        }
+        showNotification('error', errorMsg);
+        return;
+      }
+
+      showNotification('success', 'Agenda registrada correctamente');
+      setAgendarModalAbierto(false);
+      // Limpia los campos si lo deseas
+    } catch (err) {
+      showNotification('error', err.message);
+    }
+  }
+  
+  async function fetchScheduledActivities() {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) return;
+      const decoded = jwtDecode(token);
+      const userId = decoded.id || decoded.user_id;
+
+      const res = await fetch(`/api/agenda/${userId}`);
+      if (!res.ok) throw new Error('No se pudieron cargar las actividades agendadas');
+      const data = await res.json();
+      setScheduledActivities(data || []);
+    } catch (err) {
+      showNotification('error', err.message);
+    }
+  }
 
   const showNotification = (type, message) => {
     setNotification({ type, message });
@@ -259,6 +338,7 @@ export default function Dashboard() {
 
   const loadScheduledActivities = async () => {
     try {
+      await fetchScheduledActivities();
       setShowCalendar(true);
     } catch (error) {
       showNotification('error', 'Error al cargar actividades');
@@ -388,7 +468,7 @@ export default function Dashboard() {
       </div>
     );
   }
-
+console.log("scheduledActivities:", scheduledActivities);
   return (
     <div className="appWrapper">
       {/* Botón de ajustes en la esquina superior derecha */}
@@ -566,7 +646,7 @@ export default function Dashboard() {
                   tileContent={({ date, view }) => {
                     if (view === 'month') {
                       const hasActivity = scheduledActivities.some(
-                        activity => new Date(activity.date).toDateString() === date.toDateString()
+                        activity => new Date(activity.fecha).toDateString() === date.toDateString()
                       );
                       return hasActivity ? <div className="calendar-activity-dot" /> : null;
                     }
@@ -580,22 +660,27 @@ export default function Dashboard() {
                   
                   {activitiesForSelectedDate.length > 0 ? (
                     <div className="activities-list">
-                      {activitiesForSelectedDate.map(activity => (
-                        <div key={activity.id} className="activity-card">
-                          <div className="activity-time">
-                            <FiClock className="activity-icon" />
-                            {activity.time}
+                      {activitiesForSelectedDate.map(activity => {
+                        const activityName = activity.actividad_nombre || 'Sin nombre';
+                        const horaInicio = activity.hora_inicio ? activity.hora_inicio.slice(0,5) : '--:--';
+                        const horaFin = activity.hora_fin ? activity.hora_fin.slice(0,5) : '--:--';
+                        return (
+                          <div key={activity.agenda_id || activity.id} className="activity-card">
+                            <div className="activity-time">
+                              <FiClock className="activity-icon" />
+                              {horaInicio} - {horaFin}
+                            </div>
+                            <div className="activity-content">
+                              <h4>{activityName}</h4>
+                              {activity.notes && (
+                                <p className="activity-description">
+                                  {activity.notes}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <div className="activity-content">
-                            <h4>{activity.title}</h4>
-                            {activity.description && (
-                              <p className="activity-description">
-                                {activity.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="no-activities">
@@ -679,7 +764,7 @@ export default function Dashboard() {
                         <option value="" disabled>Selecciona una actividad</option>
                         {userActivities.length > 0 ? (
                           userActivities.map(activity => (
-                            <option key={activity.id} value={activity.name}>
+                            <option key={activity.id} value={activity.id}>
                               {activity.name}
                             </option>
                           ))
@@ -729,7 +814,7 @@ export default function Dashboard() {
                   <div className="modal-agendar-buttons">
                     <button
                       className="modal-agendar-button modal-agendar-button-primary"
-                      onClick={handleAgendarActividad}
+                      onClick={handleRegistrarAgenda}
                     >
                       Guardar
                     </button>
