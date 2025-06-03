@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
 import '../styles/dashboard.css';
 
+
 export default function Dashboard() {
   const router = useRouter();
   
@@ -47,6 +48,12 @@ export default function Dashboard() {
 
   // estados del modal para editar preferencias
   const [activityToEdit, setActivityToEdit] = useState(null);
+  const [permiteLluvia, setPermiteLluvia] = useState(false);
+  const [lluviaMinima, setLluviaMinima] = useState(null);
+  const [lluviaMaxima, setlluviaMaxima] = useState(null);
+  const [vientoMinimo, setVientoMinimo] = useState(null);
+  const [vientoMaximo, setVientoMaximo] = useState(null);
+  const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
 
   // StarIcon para el modal de agendar
   const StarIcon = () => (
@@ -646,15 +653,96 @@ export default function Dashboard() {
 
         {/* Modal de edición de preferencias climáticas */}
         {showEditPreferences && (
-          <div className="modal-overlay">
-            <div className="modal-content">
+          <div className="fixed modal-overlay z-50">
+            <div className="modal-content flex flex-col gap-y-4 z-50">
               <h2>{activityToEdit.name}</h2>
-              <button
-                className="modal-agendar-button modal-agendar-button-secondary"
-                onClick={() => setShowEditPreferences(false)}
-              >
-                Cancelar
-              </button>
+              <h1 className='text-center'>Rango de temperatura (°C)</h1>
+              <div className='flex gap-4'>
+                <input
+                  type="number"
+                  onChange={(e) => setCiudadActividad(e.target.value)}
+                  placeholder="Temperatura Mínima"
+                  className="modal-agendar-input"
+                />
+                <input
+                  type="number"
+                  onChange={(e) => setCiudadActividad(e.target.value)}
+                  placeholder="Temperatura Máxima"
+                  className="modal-agendar-input"
+               />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={permiteLluvia}
+                    onChange={(e) => setPermiteLluvia(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  <h1>
+                    ¿Esta actividad se puede hacer con lluvia?
+                  </h1>
+                </label>
+              </div>
+              {permiteLluvia ? (
+                <div className="flex gap-4">
+                  <input
+                    type="number"
+                    placeholder="Precipitación mínima (mm)"
+                    onChange={(e) => setLluviaMinima(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Precipitación máxima (mm)"
+                    onChange={(e) => setlluviaMaxima(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+                </div>
+              ):(
+                <p></p>
+              )}
+              <h1 className='text-center'>Intensidad del Viento (km/h)</h1>             
+              <div className="flex gap-4">
+                  <input
+                    type="number"
+                    placeholder="Intensidad mínima de viento"
+                    onChange={(e) => setVientoMinimo(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Intensidad máxima de viento"
+                    onChange={(e) => setVientoMaximo(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+                </div> 
+              <div className='flex gap-4'>     
+                <button
+                  className="modal-agendar-button modal-agendar-button-primary flex-1"
+                  onClick={() => {
+                    setShowEditPreferences(false);
+                    if (vieneDeAgendar) {
+                      setAgendarModalAbierto(true);
+                      setVieneDeAgendar(false);
+                    }
+                  }}
+                >
+                  Guardar
+                </button>
+                <button
+                  className="modal-agendar-button modal-agendar-button-secondary flex-1"
+                  onClick={() => {
+                    setShowEditPreferences(false);
+                    if (vieneDeAgendar) {
+                      setAgendarModalAbierto(true);
+                      setVieneDeAgendar(false);
+                    }
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
             </div>
           </div>
           
@@ -662,12 +750,25 @@ export default function Dashboard() {
 
         {/* Modal para Agendar Actividad */}
         {agendarModalAbierto && (
-          <div className="modal-overlay" onClick={() => setAgendarModalAbierto(false)}>
-            <div className="modal-agendar-container" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-agendar-content">
+          <div className="modal-overlay " onClick={() => setAgendarModalAbierto(false)}>
+            <div className="modal-agendar-container z-40" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-agendar-content relative ">
+
                 <h3 className="modal-agendar-title">Agendar Actividad</h3>
+                <button
+                  onClick={() => {
+                    setVieneDeAgendar(true);
+                    setAgendarModalAbierto(false);
+                    setShowEditPreferences(true);
+                  }}
+                  className="text-sm underline text-blue-600"
+                >
+                  Ajustar preferencias climáticas
+                </button>
                 <div className="modal-agendar-form">
+                  
                   <div className="modal-agendar-input-group">
+                    
                     <div className="modal-agendar-icon">
                       <StarIcon />
                     </div>
