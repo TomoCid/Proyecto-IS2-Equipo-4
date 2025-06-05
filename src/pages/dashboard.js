@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [fechaActividad, setFechaActividad] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaTermino, setHoraTermino] = useState("");
+  const [notasPreferencias, setNotasPreferencias] = useState('');
 
   // estados del modal para editar preferencias
   const [activityToEdit, setActivityToEdit] = useState(null);
@@ -200,7 +201,7 @@ export default function Dashboard() {
       fecha: fechaActividad,
       horaInicio: horaInicio,
       horaFin: horaTermino,
-      notes: ciudadActividad || null,
+      notes: notasPreferencias || null,
       latitude: lat,
       longitude: lon,
       reminderEnabled: reminderEnabled || false,
@@ -211,7 +212,7 @@ export default function Dashboard() {
       maxPrecipitationProbability: maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
       maxPrecipitationIntensity: lluviaMaxima !== '' ? Number(lluviaMaxima) : null,
       requiresNoPrecipitation: !!permiteLluvia,
-      maxUV: maxUV !== '' ? Number(maxUV) : null
+      maxUv: maxUV !== '' ? Number(maxUV) : null
     };
 
     try {
@@ -237,6 +238,7 @@ export default function Dashboard() {
       showNotification('success', 'Agenda registrada correctamente');
       setAgendarModalAbierto(false);
       limpiarCampos();
+      setForceRefreshRecommendations(prev => prev + 1); 
     } catch (err) {
       showNotification('error', err.message);
     }
@@ -1067,16 +1069,6 @@ export default function Dashboard() {
               <div className="modal-agendar-content relative ">
 
                 <h3 className="modal-agendar-title">Agendar Actividad</h3>
-                <button
-                  onClick={() => {
-                    setVieneDeAgendar(true);
-                    setAgendarModalAbierto(false);
-                    setShowEditPreferences(true);
-                  }}
-                  className="text-sm underline text-blue-600"
-                >
-                  Ajustar preferencias climáticas
-                </button>
                 <div className="modal-agendar-form">
                   
                   <div className="modal-agendar-input-group">
@@ -1101,7 +1093,18 @@ export default function Dashboard() {
                         )}
                       </select>
                   </div>
-
+                  <button
+                    onClick={() => {
+                      setVieneDeAgendar(true);
+                      setAgendarModalAbierto(false);
+                      const actividad = userActivities.find(a => a.id == actividadSeleccionada);
+                      setActivityToEdit(actividad || { name: "Nueva actividad", id: null });
+                      setShowEditPreferences(true);
+                    }}
+                    className="modal-agendar-button modal-agendar-button-primary"
+                  >
+                    Ajustar preferencias climáticas
+                  </button>
                   <input
                     type="text"
                     value={ciudadActividad}
@@ -1109,7 +1112,19 @@ export default function Dashboard() {
                     placeholder="Ubicación (opcional)"
                     className="modal-agendar-input"
                   />
-
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="notas-preferencias" className="font-semibold text-left">Notas / Descripción</label>
+                    <textarea
+                      id="notas-preferencias"
+                      value={notasPreferencias}
+                      onChange={e => setNotasPreferencias(e.target.value)}
+                      placeholder="Agrega una descripción o notas para tus preferencias..."
+                      className="modal-agendar-input"
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <label htmlFor="notas-preferencias" className="font-semibold text-left">Fecha</label>
                   <input
                     type="date"
                     value={fechaActividad}
