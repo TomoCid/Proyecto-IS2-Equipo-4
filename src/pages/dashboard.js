@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [vientoMinimo, setVientoMinimo] = useState(null);
   const [vientoMaximo, setVientoMaximo] = useState(null);
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
+  const [maxUV, setMaxUV] = useState(null);
 
   const [activityRecommendations, setActivityRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
@@ -156,6 +157,7 @@ export default function Dashboard() {
   setlluviaMaxima(null);
   setVientoMinimo(null);
   setVientoMaximo(null);
+  setMaxUV(null)
 };
 
   async function handleRegistrarAgenda() {
@@ -914,7 +916,14 @@ export default function Dashboard() {
                     onChange={(e) => setVientoMaximo(e.target.value)}
                     className="modal-agendar-input"
                   />
-                </div> 
+                </div>
+                <h1 className='text-center'>Nivel UV máximo (opcional)</h1>
+                <input
+                  type="number"
+                  placeholder="Nivel UV máximo"
+                  onChange={(e) => setMaxUV(e.target.value)}
+                  className="modal-agendar-input"
+                /> 
               <div className='flex gap-4'>     
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
@@ -925,6 +934,7 @@ export default function Dashboard() {
                     const maxLluvia = parseFloat(lluviaMaxima);
                     const minViento = parseFloat(vientoMinimo);
                     const maxViento = parseFloat(vientoMaximo);
+                    const max_uv = parseFloat(maxUV)
                     // posibles errores
                     if (isNaN(minTemp) || isNaN(maxTemp)) {
                       showNotification('error', "Completa los rangos de temperatura");
@@ -952,6 +962,11 @@ export default function Dashboard() {
                       return;
                     }
 
+                    if(maxUV < 0){
+                      showNotification('error', "Índice UV no puede tomar valores negativos");
+                      return;
+                    }
+
                     // ningun error
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
@@ -974,7 +989,8 @@ export default function Dashboard() {
                       viento: {
                         minima: Number(vientoMinimo),
                         maxima: Number(vientoMaximo),
-                      }
+                      },
+                      max_uv: maxUV !== "" ? Number(maxUV) : null
                     };
                     console.log(preferenciasClimaticas); 
                     limpiarCampos();
