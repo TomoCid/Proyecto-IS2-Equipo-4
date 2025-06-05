@@ -55,6 +55,8 @@ export default function Dashboard() {
   // estados del modal para editar preferencias
   const [activityToEdit, setActivityToEdit] = useState(null);
   const [permiteLluvia, setPermiteLluvia] = useState(false);
+  const [tempMinima, setTempMinima] = useState(null);
+  const [tempMaxima, setTempMaxima] = useState(null);
   const [lluviaMinima, setLluviaMinima] = useState(null);
   const [lluviaMaxima, setlluviaMaxima] = useState(null);
   const [vientoMinimo, setVientoMinimo] = useState(null);
@@ -146,6 +148,15 @@ export default function Dashboard() {
     setShowEditPreferences(true);
     setActivityToEdit(activity);
   }
+
+  const limpiarCampos = () => {
+  setTempMinima(null);
+  setTempMaxima(null);
+  setLluviaMinima(null);
+  setlluviaMaxima(null);
+  setVientoMinimo(null);
+  setVientoMaximo(null);
+};
 
   async function handleRegistrarAgenda() {
     if (!actividadSeleccionada || !fechaActividad || !horaInicio || !horaTermino) {
@@ -838,7 +849,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Modal de edición de preferencias climáticas */}
+        {/* Modal de edición de preferencias climáticas*/}
         {showEditPreferences && (
           <div className="fixed modal-overlay z-50">
             <div className="modal-content flex flex-col gap-y-4 z-50">
@@ -847,13 +858,13 @@ export default function Dashboard() {
               <div className='flex gap-4'>
                 <input
                   type="number"
-                  onChange={(e) => setCiudadActividad(e.target.value)}
+                  onChange={(e) => setTempMinima(e.target.value)}
                   placeholder="Temperatura Mínima"
                   className="modal-agendar-input"
                 />
                 <input
                   type="number"
-                  onChange={(e) => setCiudadActividad(e.target.value)}
+                  onChange={(e) => setTempMaxima(e.target.value)}
                   placeholder="Temperatura Máxima"
                   className="modal-agendar-input"
                />
@@ -908,11 +919,65 @@ export default function Dashboard() {
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
                   onClick={() => {
+                    const minTemp = parseFloat(tempMinima);
+                    const maxTemp = parseFloat(tempMaxima);
+                    const minLluvia = parseFloat(lluviaMinima);
+                    const maxLluvia = parseFloat(lluviaMaxima);
+                    const minViento = parseFloat(vientoMinimo);
+                    const maxViento = parseFloat(vientoMaximo);
+                    // posibles errores
+                    if (isNaN(minTemp) || isNaN(maxTemp)) {
+                      showNotification('error', "Completa los rangos de temperatura");
+                      return;
+                    } else if (maxTemp < minTemp) {
+                      showNotification('error', "Temperatura máxima no puede ser inferior a temperatura mínima");
+                      return;
+                    }
+
+                    if (permiteLluvia && (
+                      isNaN(minLluvia) || isNaN(maxLluvia) ||
+                      minLluvia < 0 || maxLluvia < 0 ||
+                      maxLluvia < minLluvia
+                    )) {
+                      showNotification('error', "Valores de precipitación inválidos o incompletos");
+                      return;
+                    }
+
+                    if (
+                      isNaN(minViento) || isNaN(maxViento) ||
+                      minViento < 0 || maxViento < 0 ||
+                      maxViento < minViento
+                    ) {
+                      showNotification('error', "Valores de intensidad del viento inválidos o incompletos");
+                      return;
+                    }
+
+                    // ningun error
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
+                    const preferenciasClimaticas = {
+                      actividadId: activityToEdit.id,
+                      temperatura: {
+                        minima: Number(tempMinima),
+                        maxima: Number(tempMaxima),
+                      },
+                      permiteLluvia,
+                      lluvia: permiteLluvia
+                        ? {
+                            minima: Number(lluviaMinima),
+                            maxima: Number(lluviaMaxima),
+                          }
+                        : null,
+                      viento: {
+                        minima: Number(vientoMinimo),
+                        maxima: Number(vientoMaximo),
+                      }
+                    };
+                    console.log(preferenciasClimaticas); 
+                    limpiarCampos();
                   }}
                 >
                   Guardar
@@ -925,6 +990,7 @@ export default function Dashboard() {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
+                    limpiarCampos();
                   }}
                 >
                   Cancelar
