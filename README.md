@@ -104,6 +104,13 @@ CREATE TABLE "Agenda" (
     "reminder_offset_minutes" INTEGER, 
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "min_temp" SMALLINT,
+    "max_temp" SMALLINT,
+    "max_wind_speed" SMALLINT,
+    "max_precipitation_probability" SMALLINT,
+    "max_precipitation_intensity" DECIMAL(4, 2),
+    "requires_no_precipitation" BOOLEAN DEFAULT FALSE NOT NULL,
+    "max_uv" SMALLINT;
 
     CONSTRAINT fk_agenda_user
         FOREIGN KEY("user_id")
