@@ -6,6 +6,7 @@ import 'react-calendar/dist/Calendar.css';
 import { useRouter } from 'next/router';
 import { jwtDecode } from 'jwt-decode';
 import { FiThumbsUp, FiThumbsDown, FiInfo } from 'react-icons/fi';
+import ActivityFormModal from 'src/components/Activity/ActivityFormModal';
 import '../styles/dashboard.css';
 
 
@@ -68,6 +69,8 @@ export default function Dashboard() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [errorRecommendations, setErrorRecommendations] = useState(null);
   const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
+
+  const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   
   // StarIcon para el modal de agendar
   const StarIcon = () => (
@@ -467,9 +470,7 @@ export default function Dashboard() {
         return;
     }
     try {
-
       const userId = usuario.id; 
-
       console.log("[USER_ACTIVITIES] Fetching for userId:", userId);
       const res = await fetch(`/api/users/actividades_usuario?userId=${userId}`);
       if (!res.ok) {
@@ -572,6 +573,12 @@ export default function Dashboard() {
       align: 'right'
     });
   };
+
+  const handleSaveNewActivity = () => {
+    fetchUserActivities(); 
+    setForceRefreshRecommendations(prev => prev + 1);
+  };
+
 
   if (checkingAuth) {
     return ( 
@@ -826,7 +833,16 @@ export default function Dashboard() {
                 <FiX />
               </button>
               
-              <h2>Mis Actividades</h2>        
+              <h2>Mis Actividades</h2>
+
+              {/* --- BOTÓN PARA ABRIR EL MODAL DE CREACIÓN DE ACTIVIDAD --- */}
+              <button
+                onClick={() => setShowCreateActivityModal(true)}
+                className="create-activity-button" // Añade estilos para esta clase en tu CSS
+              >
+                <FiPlus /> Crear Nueva Actividad
+              </button>
+              
               <div className="activities-list-container">
                 {userActivities.length > 0 ? (
                   userActivities.map(activity => (
@@ -837,15 +853,15 @@ export default function Dashboard() {
                       )}
                       <button
                         className="settings-button absolute top-2 right-2"
-                        onClick={() => handleEditPreferences(activity)}
+                        onClick={() => handleEditPreferences(activity)} // Esto usa tu modal de preferencias simple
                       >
                         <MdSettings size={20} />
                       </button>
                     </div>
-                      ))
-                    ) : (
-                      <p className="no-activities">No tienes actividades asociadas</p>
-                    )}
+                  ))
+                ) : (
+                  <p className="no-activities">No tienes actividades personalizadas. ¡Crea una!</p>
+                )}
               </div>
             </div>
           </div>
@@ -1114,6 +1130,16 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {usuario?.id && ( // Asegúrate que usuario.id exista antes de renderizar
+          <ActivityFormModal
+            isOpen={showCreateActivityModal}
+            onClose={() => setShowCreateActivityModal(false)}
+            userId={usuario.id}
+            activityToEdit={null} // Siempre null para "Crear Nueva Actividad" desde este botón
+            onSave={handleSaveNewActivity}
+          />
         )}
 
          {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && detectStatus === 'idle' && (

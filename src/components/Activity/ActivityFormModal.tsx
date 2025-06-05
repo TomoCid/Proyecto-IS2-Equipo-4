@@ -34,6 +34,8 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const numericUserId = Number(userId);
+
   const isEditingUserActivity = activityToEdit && activityToEdit.user_id === userId;
   const isModifyingStandardActivity = activityToEdit && activityToEdit.user_id === null;
   const isCreatingNew = !activityToEdit;
@@ -79,6 +81,12 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
     setIsLoading(true);
     setError(null);
 
+    if (isNaN(numericUserId)) { 
+        setError("Error interno: ID de usuario no es válido.");
+        setIsLoading(false);
+        return;
+    }
+
     if (!formData.name.trim()) {
       setError("El nombre de la actividad es obligatorio.");
       setIsLoading(false);
@@ -97,28 +105,27 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
 
     const payload = {
       ...formData,
-      user_id: userId, 
+      user_id: numericUserId, 
     };
 
     try {
       let response;
-      if (isEditingUserActivity && activityToEdit?.id) {
+      if ((isEditingUserActivity || isModifyingStandardActivity) && activityToEdit?.id) {
         // Actualizar actividad existente del usuario
         response = await fetch(`/api/activities/${activityToEdit.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload), 
         });
       } else {
         const createPayload = {
             activity: {
                 name: payload.name,
                 description: payload.description,
-                icon_name: payload.icon_name,
-                user_id: userId,
+                user_id: numericUserId,
             },
             preferences: {
-                user_id: userId, 
+                user_id: numericUserId, 
                 min_temp: payload.min_temp,
                 max_temp: payload.max_temp,
                 max_wind_speed: payload.max_wind_speed,
@@ -185,17 +192,6 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
                 name="description"
                 value={formData.description || ''}
                 onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="icon_name">Nombre del Icono:</label>
-              <input
-                type="text"
-                id="icon_name"
-                name="icon_name"
-                value={formData.icon_name || ''}
-                onChange={handleChange}
-                maxLength={50}
               />
             </div>
           </fieldset>
