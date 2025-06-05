@@ -63,7 +63,12 @@ export default function Dashboard() {
   const [vientoMinimo, setVientoMinimo] = useState(null);
   const [vientoMaximo, setVientoMaximo] = useState(null);
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
-  const [maxUV, setMaxUV] = useState(null);
+  const [maxUV, setMaxUV] = useState('');
+  const [periodicidad] = useState(0);
+  const [maxPrecipitationProbability, setMaxPrecipitationProbability] = useState('');
+  const [requiresNoPrecipitation, setRequiresNoPrecipitation] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(null);
 
   const [activityRecommendations, setActivityRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
@@ -149,19 +154,19 @@ export default function Dashboard() {
   };
 
   const handleEditPreferences = (activity) => {
-    setShowEditPreferences(true);
     setActivityToEdit(activity);
+    setShowEditPreferences(true);
   }
 
   const limpiarCampos = () => {
-  setTempMinima(null);
-  setTempMaxima(null);
-  setLluviaMinima(null);
-  setlluviaMaxima(null);
-  setVientoMinimo(null);
-  setVientoMaximo(null);
-  setMaxUV(null)
-};
+    setTempMinima(null);
+    setTempMaxima(null);
+    setLluviaMinima(null);
+    setlluviaMaxima(null);
+    setVientoMinimo(null);
+    setVientoMaximo(null);
+    setMaxUV(null)
+  };
 
   async function handleRegistrarAgenda() {
     if (!actividadSeleccionada || !fechaActividad || !horaInicio || !horaTermino) {
@@ -176,7 +181,7 @@ export default function Dashboard() {
     }
     const decoded = jwtDecode(token);
     const userId = decoded.id || decoded.user_id;
-    
+      
     let lat = null;
     let lon = null;
     if (ciudadActividad) {
@@ -191,12 +196,22 @@ export default function Dashboard() {
     }
     const entryData = {
       activityId: Number(actividadSeleccionada),
+      periodicidad: periodicidad,
       fecha: fechaActividad,
-      horaInicio,
+      horaInicio: horaInicio,
       horaFin: horaTermino,
       notes: ciudadActividad || null,
       latitude: lat,
       longitude: lon,
+      reminderEnabled: reminderEnabled || false,
+      reminderOffsetMinutes: reminderOffsetMinutes !== '' ? Number(reminderOffsetMinutes) : null,
+      minTemp: tempMinima !== '' ? Number(tempMinima) : null,
+      maxTemp: tempMaxima !== '' ? Number(tempMaxima) : null,
+      maxWindSpeed: vientoMaximo !== '' ? Number(vientoMaximo) : null,
+      maxPrecipitationProbability: maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
+      maxPrecipitationIntensity: lluviaMaxima !== '' ? Number(lluviaMaxima) : null,
+      requiresNoPrecipitation: !!permiteLluvia,
+      maxUV: maxUV !== '' ? Number(maxUV) : null
     };
 
     try {
@@ -221,7 +236,7 @@ export default function Dashboard() {
 
       showNotification('success', 'Agenda registrada correctamente');
       setAgendarModalAbierto(false);
-      // Limpia los campos si lo deseas
+      limpiarCampos();
     } catch (err) {
       showNotification('error', err.message);
     }
@@ -871,22 +886,25 @@ export default function Dashboard() {
         {showEditPreferences && (
           <div className="fixed modal-overlay z-50">
             <div className="modal-content flex flex-col gap-y-4 z-50">
-              <h2>{activityToEdit.name}</h2>
+              <h2>{activityToEdit ? activityToEdit.name : "Preferencias climáticas"}</h2>
               <h1 className='text-center'>Rango de temperatura (°C)</h1>
               <div className='flex gap-4'>
                 <input
                   type="number"
+                  value={tempMinima ?? ''}
                   onChange={(e) => setTempMinima(e.target.value)}
                   placeholder="Temperatura Mínima"
                   className="modal-agendar-input"
                 />
                 <input
                   type="number"
+                  value={tempMaxima ?? ''}
                   onChange={(e) => setTempMaxima(e.target.value)}
                   placeholder="Temperatura Máxima"
                   className="modal-agendar-input"
-               />
+                />
               </div>
+
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -900,47 +918,57 @@ export default function Dashboard() {
                   </h1>
                 </label>
               </div>
+
               {permiteLluvia ? (
                 <div className="flex gap-4">
                   <input
                     type="number"
+                    value={lluviaMinima ?? ''}
                     placeholder="Precipitación mínima (mm)"
                     onChange={(e) => setLluviaMinima(e.target.value)}
                     className="modal-agendar-input"
                   />
                   <input
                     type="number"
+                    value={lluviaMaxima ?? ''}
                     placeholder="Precipitación máxima (mm)"
                     onChange={(e) => setlluviaMaxima(e.target.value)}
                     className="modal-agendar-input"
                   />
                 </div>
-              ):(
+              ) : (
                 <p></p>
               )}
-              <h1 className='text-center'>Intensidad del Viento (km/h)</h1>             
+              <h1 className='text-center'>Intensidad del Viento (km/h)</h1>
               <div className="flex gap-4">
-                  <input
-                    type="number"
-                    placeholder="Intensidad mínima de viento"
-                    onChange={(e) => setVientoMinimo(e.target.value)}
-                    className="modal-agendar-input"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Intensidad máxima de viento"
-                    onChange={(e) => setVientoMaximo(e.target.value)}
-                    className="modal-agendar-input"
-                  />
-                </div>
-                <h1 className='text-center'>Nivel UV máximo (opcional)</h1>
                 <input
                   type="number"
+                  value={vientoMinimo ?? ''}
+                  placeholder="Intensidad mínima de viento"
+                  onChange={(e) => setVientoMinimo(e.target.value)}
+                  className="modal-agendar-input"
+                />
+                <input
+                  type="number"
+                  value={vientoMaximo ?? ''}
+                  placeholder="Intensidad máxima de viento"
+                  onChange={(e) => setVientoMaximo(e.target.value)}
+                  className="modal-agendar-input"
+                />
+              </div>
+
+              <h1 className='text-center'>Nivel UV máximo (Opcional)</h1>
+              <div className="flex gap-4">
+                <input
+                  type="number"
+                  value={maxUV ?? ''}
                   placeholder="Nivel UV máximo"
                   onChange={(e) => setMaxUV(e.target.value)}
                   className="modal-agendar-input"
-                /> 
-              <div className='flex gap-4'>     
+                />
+              </div>
+
+              <div className='flex gap-4'>
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
                   onClick={() => {
@@ -982,7 +1010,6 @@ export default function Dashboard() {
                       showNotification('error', "Índice UV no puede tomar valores negativos");
                       return;
                     }
-
                     // ningun error
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
