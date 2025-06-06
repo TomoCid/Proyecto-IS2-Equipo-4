@@ -1,4 +1,4 @@
-import * as preferenceService from '@app/preference/preference.service.js';
+import * as preferenceService from '../../../app/preferencia/preference.service.js';
 
 /**
  * Controlador para asignar preferencias a actividad de un usuario.
@@ -6,8 +6,8 @@ import * as preferenceService from '@app/preference/preference.service.js';
 
 export async function handleCreatePreference(req, res) {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const activityId = parseInt(req.params.activityId, 10);
+    const userId = parseInt(req.query.userId, 10);
+    const activityId = parseInt(req.query.activityId, 10);
     const preferenceData = req.body; // Datos de la preferencia desde el cuerpo de la solicitud
 
     if (isNaN(userId) || isNaN(activityId)) {
@@ -36,8 +36,8 @@ export async function handleCreatePreference(req, res) {
 
 export async function handleModifyPreference(req, res) {
   try {
-    const userId = parseInt(req.params.userId, 10);
-    const activityId = parseInt(req.params.activityId, 10);
+    const userId = parseInt(req.query.userId, 10);
+    const activityId = parseInt(req.query.activityId, 10);
     const updateData = req.body; // Datos de la preferencia desde el cuerpo de la solicitud
 
     if (isNaN(userId) || isNaN(activityId)) {

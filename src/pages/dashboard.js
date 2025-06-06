@@ -988,7 +988,7 @@ export default function Dashboard() {
               <div className='flex gap-4'>
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
-                  onClick={() => {
+                  onClick={async () => {
                     const minTemp = parseFloat(tempMinima);
                     const maxTemp = parseFloat(tempMaxima);
                     const probMaxLluvia = parseFloat(lluviaProbMaxima);
@@ -1018,45 +1018,57 @@ export default function Dashboard() {
                       return;
                     }
 
-                    // GUARDAR preferencias SOLO si el usuario pulsa Guardar
-                    setPreferenciasClimaticasTemp({
-                      tempMinima,
-                      tempMaxima,
-                      permiteLluvia,
-                      lluviaProbMaxima,
-                      lluviaMaxima,
-                      vientoMaximo,
-                      maxUV
-                    });
+                    if (activityToEdit) {
+                      // MODIFICAR preferencias de la actividad en el backend
+                      try {
+                        const token = sessionStorage.getItem('token');
+                        const res = await fetch(`/api/preference/${usuario.id}/${activityToEdit.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            min_temp: minTemp,
+                            max_temp: maxTemp,
+                            max_wind_speed: maxViento,
+                            max_precipitation_probability: probMaxLluvia,
+                            max_precipitation_intensity: maxLluvia,
+                            permite_lluvia: permiteLluvia,
+                            max_uv: maxUV
+                          })
+                        });
+                        if (!res.ok) {
+                          const errorData = await res.json();
+                          showNotification('error', errorData.error || 'Error al modificar preferencias');
+                          return;
+                        }
+                        showNotification('success', 'Preferencias actualizadas');
+                        fetchUserActivities(); // Refresca la lista de actividades
+                      } catch (err) {
+                        showNotification('error', err.message || 'Error al modificar preferencias');
+                        return;
+                      }
+                    } else {
+                      // Guardar preferencias temporales para agendar
+                      setPreferenciasClimaticasTemp({
+                        tempMinima,
+                        tempMaxima,
+                        permiteLluvia,
+                        lluviaProbMaxima,
+                        lluviaMaxima,
+                        vientoMaximo,
+                        maxUV
+                      });
+                    }
 
                     limpiarCampos();
                     setShowEditPreferences(false);
+                    setActivityToEdit(null);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-
-                    const preferenciasClimaticas = {
-                      actividadId: activityToEdit.id,
-                      temperatura: {
-                        minima: Number(tempMinima),
-                        maxima: Number(tempMaxima),
-                      },
-                      permiteLluvia,
-                      lluvia: permiteLluvia
-                        ? {
-                            probMaxima: Number(lluviaProbMaxima),
-                            maxima: Number(lluviaMaxima),
-                          }
-                        : null,
-                      viento: {
-                        maxima: Number(vientoMaximo),
-                      },
-                      max_uv: maxUV !== "" ? Number(maxUV) : null
-                    };
-                    console.log(preferenciasClimaticas); 
-                    limpiarCampos();
-
                   }}
                 >
                   Guardar
