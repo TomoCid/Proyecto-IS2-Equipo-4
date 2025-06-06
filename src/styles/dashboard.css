@@ -454,7 +454,7 @@ body {
 }
 
 .create-activity-button {
-  background-color: #007bff;
+  background-color: var(--primary);
   color: white;
   padding: 8px 15px;
   border: none;

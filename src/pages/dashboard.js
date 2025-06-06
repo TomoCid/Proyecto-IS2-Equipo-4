@@ -1156,7 +1156,7 @@ export default function Dashboard() {
 
                   <div className="modal-agendar-buttons">
                     <button
-                      className="modal-agendar-button modal-agendar-button-primary"
+                      className="modal-agendar-button C"
                       onClick={handleRegistrarAgenda}
                     >
                       Guardar

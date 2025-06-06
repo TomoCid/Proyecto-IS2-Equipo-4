@@ -1,5 +1,6 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import { ActivityFormData, ActivityWithPreferences } from 'src/app/types'; 
+import '../../styles/crearActividad.css'
 
 interface ActivityFormModalProps {
   isOpen: boolean;
@@ -274,6 +275,7 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
                 value={formData.max_uv ?? ''}
                 onChange={handleChange}
                 min="0"
+                max="11"
               />
             </div>
             <div>
@@ -300,93 +302,7 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
           </div>
         </form>
       </div>
-      <style jsx>{`
-        .modal-backdrop {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.5);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-        .modal-content {
-          color: black;
-          background-color: white;
-          padding: 20px;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-          width: 90%;
-          max-width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-        .modal-content h2 {
-          margin-top: 0;
-        }
-        .modal-content form div {
-          margin-bottom: 15px;
-        }
-        .modal-content form label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: bold;
-        }
-        .modal-content form input[type="text"],
-        .modal-content form input[type="number"],
-        .modal-content form textarea,
-        .modal-content form select {
-          width: calc(100% - 16px); /* Adjust for padding */
-          padding: 8px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-        }
-        .modal-content form input[type="checkbox"] {
-          margin-right: 5px;
-          width: auto;
-        }
-        .modal-content form fieldset {
-          border: 1px solid #ddd;
-          padding: 10px;
-          margin-bottom: 20px;
-          border-radius: 4px;
-        }
-        .modal-content form legend {
-          font-weight: bold;
-          padding: 0 5px;
-        }
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 20px;
-        }
-        .modal-actions button {
-          padding: 10px 15px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-        .modal-actions button[type="submit"] {
-          background-color: #007bff;
-          color: white;
-        }
-        .modal-actions button[type="button"] {
-          background-color: #6c757d;
-          color: white;
-        }
-        .error-message {
-          color: red;
-          background-color: #ffebee;
-          border: 1px solid red;
-          padding: 10px;
-          border-radius: 4px;
-          margin-bottom: 15px;
-        }
-      `}</style>
+      
     </div>
   );
 };
