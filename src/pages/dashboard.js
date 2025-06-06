@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [fechaActividad, setFechaActividad] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
   const [horaTermino, setHoraTermino] = useState("");
+  const [notasPreferencias, setNotasPreferencias] = useState('');
 
   // estados del modal para editar preferencias
   const [activityToEdit, setActivityToEdit] = useState(null);
@@ -62,13 +63,18 @@ export default function Dashboard() {
   const [lluviaMaxima, setlluviaMaxima] = useState(null);
   const [vientoMaximo, setVientoMaximo] = useState(null);
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
-  const [maxUV, setMaxUV] = useState(null);
+  const [maxUV, setMaxUV] = useState('');
+  const [periodicidad] = useState(0);
+  const [maxPrecipitationProbability, setMaxPrecipitationProbability] = useState('');
+  const [requiresNoPrecipitation, setRequiresNoPrecipitation] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(null);
 
   const [activityRecommendations, setActivityRecommendations] = useState([]);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [errorRecommendations, setErrorRecommendations] = useState(null);
   const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
-
+  const [preferenciasClimaticasTemp, setPreferenciasClimaticasTemp] = useState(null);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   
   // StarIcon para el modal de agendar
@@ -129,6 +135,20 @@ export default function Dashboard() {
     }
   }, [checkingAuth, usuario]);
   
+  // Sincronizar preferencias climáticas al abrir el modal de agendar
+  useEffect(() => {
+    if (agendarModalAbierto && preferenciasClimaticasTemp) {
+      setTempMinima(preferenciasClimaticasTemp.tempMinima);
+      setTempMaxima(preferenciasClimaticasTemp.tempMaxima);
+      setPermiteLluvia(preferenciasClimaticasTemp.permiteLluvia);
+      setLluviaMinima(preferenciasClimaticasTemp.lluviaMinima);
+      setlluviaMaxima(preferenciasClimaticasTemp.lluviaMaxima);
+      setVientoMinimo(preferenciasClimaticasTemp.vientoMinimo);
+      setVientoMaximo(preferenciasClimaticasTemp.vientoMaximo);
+      setMaxUV(preferenciasClimaticasTemp.maxUV);
+    }
+  }, [agendarModalAbierto]);
+
   // Intentar detectar ubicación inicial si no se ha hecho
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
@@ -148,8 +168,8 @@ export default function Dashboard() {
   };
 
   const handleEditPreferences = (activity) => {
-    setShowEditPreferences(true);
     setActivityToEdit(activity);
+    setShowEditPreferences(true);
   }
 
   const limpiarCampos = () => {
@@ -159,7 +179,8 @@ export default function Dashboard() {
   setlluviaMaxima(null);
   setVientoMaximo(null);
   setMaxUV(null)
-};
+  setRequiresNoPrecipitation(false);
+  };
 
   async function handleRegistrarAgenda() {
     if (!actividadSeleccionada || !fechaActividad || !horaInicio || !horaTermino) {
@@ -174,7 +195,7 @@ export default function Dashboard() {
     }
     const decoded = jwtDecode(token);
     const userId = decoded.id || decoded.user_id;
-    
+      
     let lat = null;
     let lon = null;
     if (ciudadActividad) {
@@ -187,14 +208,35 @@ export default function Dashboard() {
         }
       }
     }
+    const preferencias = preferenciasClimaticasTemp || {
+      tempMinima,
+      tempMaxima,
+      permiteLluvia,
+      lluviaMinima,
+      lluviaMaxima,
+      vientoMinimo,
+      vientoMaximo,
+      maxUV
+    };
+
     const entryData = {
       activityId: Number(actividadSeleccionada),
+      periodicidad: periodicidad,
       fecha: fechaActividad,
-      horaInicio,
+      horaInicio: horaInicio,
       horaFin: horaTermino,
-      notes: ciudadActividad || null,
+      notes: notasPreferencias || null,
       latitude: lat,
       longitude: lon,
+      reminderEnabled: reminderEnabled || false,
+      reminderOffsetMinutes: reminderOffsetMinutes !== '' ? Number(reminderOffsetMinutes) : null,
+      minTemp: preferencias.tempMinima !== null && preferencias.tempMinima !== '' ? Number(preferencias.tempMinima) : null,
+      maxTemp: preferencias.tempMaxima !== null && preferencias.tempMaxima !== '' ? Number(preferencias.tempMaxima) : null,
+      maxWindSpeed: preferencias.vientoMaximo !== null && preferencias.vientoMaximo !== '' ? Number(preferencias.vientoMaximo) : null,
+      maxPrecipitationProbability: maxPrecipitationProbability !== null && maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
+      maxPrecipitationIntensity: preferencias.lluviaMaxima !== null && preferencias.lluviaMaxima !== '' ? Number(preferencias.lluviaMaxima) : null,
+      requiresNoPrecipitation: !!preferencias.permiteLluvia,
+      maxUv: preferencias.maxUV !== null && preferencias.maxUV !== '' ? Number(preferencias.maxUV) : null
     };
 
     try {
@@ -219,7 +261,8 @@ export default function Dashboard() {
 
       showNotification('success', 'Agenda registrada correctamente');
       setAgendarModalAbierto(false);
-      // Limpia los campos si lo deseas
+      limpiarCampos();
+      setForceRefreshRecommendations(prev => prev + 1); 
     } catch (err) {
       showNotification('error', err.message);
     }
@@ -869,22 +912,25 @@ export default function Dashboard() {
         {showEditPreferences && (
           <div className="fixed modal-overlay z-50">
             <div className="modal-content flex flex-col gap-y-4 z-50">
-              <h2>{activityToEdit.name}</h2>
+              <h2>{activityToEdit ? activityToEdit.name : "Preferencias climáticas"}</h2>
               <h1 className='text-center'>Rango de temperatura (°C)</h1>
               <div className='flex gap-4'>
                 <input
                   type="number"
+                  value={tempMinima ?? ''}
                   onChange={(e) => setTempMinima(e.target.value)}
                   placeholder="Temperatura Mínima"
                   className="modal-agendar-input"
                 />
                 <input
                   type="number"
+                  value={tempMaxima ?? ''}
                   onChange={(e) => setTempMaxima(e.target.value)}
                   placeholder="Temperatura Máxima"
                   className="modal-agendar-input"
-               />
+                />
               </div>
+
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
@@ -898,6 +944,7 @@ export default function Dashboard() {
                   </h1>
                 </label>
               </div>
+
               {permiteLluvia ? (
                 <div className="flex gap-4">
                   <input
@@ -908,15 +955,16 @@ export default function Dashboard() {
                   />
                   <input
                     type="number"
+                    value={lluviaMaxima ?? ''}
                     placeholder="Precipitación máxima (mm)"
                     onChange={(e) => setlluviaMaxima(e.target.value)}
                     className="modal-agendar-input"
                   />
                 </div>
-              ):(
+              ) : (
                 <p></p>
               )}
-              <h1 className='text-center'>Intensidad del Viento (km/h)</h1>             
+              <h1 className='text-center'>Intensidad del Viento (km/h)</h1>
               <div className="flex gap-4">
                   <input
                     type="number"
@@ -924,15 +972,21 @@ export default function Dashboard() {
                     onChange={(e) => setVientoMaximo(e.target.value)}
                     className="modal-agendar-input"
                   />
-                </div>
-                <h1 className='text-center'>Nivel UV máximo (opcional)</h1>
+
+              </div>
+
+              <h1 className='text-center'>Nivel UV máximo (Opcional)</h1>
+              <div className="flex gap-4">
                 <input
                   type="number"
+                  value={maxUV ?? ''}
                   placeholder="Nivel UV máximo"
                   onChange={(e) => setMaxUV(e.target.value)}
                   className="modal-agendar-input"
-                /> 
-              <div className='flex gap-4'>     
+                />
+              </div>
+
+              <div className='flex gap-4'>
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
                   onClick={() => {
@@ -941,8 +995,7 @@ export default function Dashboard() {
                     const probMaxLluvia = parseFloat(lluviaProbMaxima);
                     const maxLluvia = parseFloat(lluviaMaxima);
                     const maxViento = parseFloat(vientoMaximo);
-                    const max_uv = parseFloat(maxUV)
-                    // posibles errores
+
                     if (isNaN(minTemp) || isNaN(maxTemp)) {
                       showNotification('error', "Completa los rangos de temperatura");
                       return;
@@ -961,17 +1014,29 @@ export default function Dashboard() {
                       return;
                     }
 
-                    if(maxUV < 0){
+                    if (maxUV < 0) {
                       showNotification('error', "Índice UV no puede tomar valores negativos");
                       return;
                     }
 
-                    // ningun error
+                    // GUARDAR preferencias SOLO si el usuario pulsa Guardar
+                    setPreferenciasClimaticasTemp({
+                      tempMinima,
+                      tempMaxima,
+                      permiteLluvia,
+                      lluviaProbMaxima,
+                      lluviaMaxima,
+                      vientoMaximo,
+                      maxUV
+                    });
+
+                    limpiarCampos();
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
+
                     const preferenciasClimaticas = {
                       actividadId: activityToEdit.id,
                       temperatura: {
@@ -992,6 +1057,7 @@ export default function Dashboard() {
                     };
                     console.log(preferenciasClimaticas); 
                     limpiarCampos();
+
                   }}
                 >
                   Guardar
@@ -999,12 +1065,13 @@ export default function Dashboard() {
                 <button
                   className="modal-agendar-button modal-agendar-button-secondary flex-1"
                   onClick={() => {
+                    limpiarCampos();
+                    setPreferenciasClimaticasTemp(null);
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-                    limpiarCampos();
                   }}
                 >
                   Cancelar
@@ -1012,26 +1079,22 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          
         )}
 
         {/* Modal para Agendar Actividad */}
         {agendarModalAbierto && (
-          <div className="modal-overlay " onClick={() => setAgendarModalAbierto(false)}>
+            <div
+              className="modal-overlay"
+              onClick={() => {
+                setAgendarModalAbierto(false);
+                limpiarCampos();
+                setPreferenciasClimaticasTemp(null);
+              }}
+            >
             <div className="modal-agendar-container z-40" onClick={(e) => e.stopPropagation()}>
               <div className="modal-agendar-content relative ">
 
                 <h3 className="modal-agendar-title">Agendar Actividad</h3>
-                <button
-                  onClick={() => {
-                    setVieneDeAgendar(true);
-                    setAgendarModalAbierto(false);
-                    setShowEditPreferences(true);
-                  }}
-                  className="text-sm underline text-blue-600"
-                >
-                  Ajustar preferencias climáticas
-                </button>
                 <div className="modal-agendar-form">
                   
                   <div className="modal-agendar-input-group">
@@ -1056,7 +1119,18 @@ export default function Dashboard() {
                         )}
                       </select>
                   </div>
-
+                  <button
+                    onClick={() => {
+                      setVieneDeAgendar(true);
+                      setAgendarModalAbierto(false);
+                      const actividad = userActivities.find(a => a.id == actividadSeleccionada);
+                      setActivityToEdit(actividad || { name: "Nueva actividad", id: null });
+                      setShowEditPreferences(true);
+                    }}
+                    className="modal-agendar-button modal-agendar-button-primary"
+                  >
+                    Ajustar preferencias climáticas
+                  </button>
                   <input
                     type="text"
                     value={ciudadActividad}
@@ -1064,7 +1138,19 @@ export default function Dashboard() {
                     placeholder="Ubicación (opcional)"
                     className="modal-agendar-input"
                   />
-
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="notas-preferencias" className="font-semibold text-left">Notas / Descripción</label>
+                    <textarea
+                      id="notas-preferencias"
+                      value={notasPreferencias}
+                      onChange={e => setNotasPreferencias(e.target.value)}
+                      placeholder="Agrega una descripción o notas para tus preferencias..."
+                      className="modal-agendar-input"
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <label htmlFor="notas-preferencias" className="font-semibold text-left">Fecha</label>
                   <input
                     type="date"
                     value={fechaActividad}
@@ -1103,7 +1189,11 @@ export default function Dashboard() {
                     </button>
                     <button
                       className="modal-agendar-button modal-agendar-button-secondary"
-                      onClick={() => setAgendarModalAbierto(false)}
+                      onClick={() => {
+                        setAgendarModalAbierto(false);
+                        limpiarCampos();
+                        setPreferenciasClimaticasTemp(null); 
+                      }}
                     >
                       Cancelar
                     </button>
