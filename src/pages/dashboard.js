@@ -75,7 +75,7 @@ export default function Dashboard() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [errorRecommendations, setErrorRecommendations] = useState(null);
   const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
-
+  const [preferenciasClimaticasTemp, setPreferenciasClimaticasTemp] = useState(null);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   
   // StarIcon para el modal de agendar
@@ -136,6 +136,20 @@ export default function Dashboard() {
     }
   }, [checkingAuth, usuario]);
   
+  // Sincronizar preferencias climáticas al abrir el modal de agendar
+  useEffect(() => {
+    if (agendarModalAbierto && preferenciasClimaticasTemp) {
+      setTempMinima(preferenciasClimaticasTemp.tempMinima);
+      setTempMaxima(preferenciasClimaticasTemp.tempMaxima);
+      setPermiteLluvia(preferenciasClimaticasTemp.permiteLluvia);
+      setLluviaMinima(preferenciasClimaticasTemp.lluviaMinima);
+      setlluviaMaxima(preferenciasClimaticasTemp.lluviaMaxima);
+      setVientoMinimo(preferenciasClimaticasTemp.vientoMinimo);
+      setVientoMaximo(preferenciasClimaticasTemp.vientoMaximo);
+      setMaxUV(preferenciasClimaticasTemp.maxUV);
+    }
+  }, [agendarModalAbierto]);
+
   // Intentar detectar ubicación inicial si no se ha hecho
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
@@ -167,6 +181,7 @@ export default function Dashboard() {
     setVientoMinimo(null);
     setVientoMaximo(null);
     setMaxUV(null)
+    setRequiresNoPrecipitation(false);
   };
 
   async function handleRegistrarAgenda() {
@@ -195,6 +210,17 @@ export default function Dashboard() {
         }
       }
     }
+    const preferencias = preferenciasClimaticasTemp || {
+      tempMinima,
+      tempMaxima,
+      permiteLluvia,
+      lluviaMinima,
+      lluviaMaxima,
+      vientoMinimo,
+      vientoMaximo,
+      maxUV
+    };
+
     const entryData = {
       activityId: Number(actividadSeleccionada),
       periodicidad: periodicidad,
@@ -206,13 +232,13 @@ export default function Dashboard() {
       longitude: lon,
       reminderEnabled: reminderEnabled || false,
       reminderOffsetMinutes: reminderOffsetMinutes !== '' ? Number(reminderOffsetMinutes) : null,
-      minTemp: tempMinima !== '' ? Number(tempMinima) : null,
-      maxTemp: tempMaxima !== '' ? Number(tempMaxima) : null,
-      maxWindSpeed: vientoMaximo !== '' ? Number(vientoMaximo) : null,
-      maxPrecipitationProbability: maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
-      maxPrecipitationIntensity: lluviaMaxima !== '' ? Number(lluviaMaxima) : null,
-      requiresNoPrecipitation: !!permiteLluvia,
-      maxUv: maxUV !== '' ? Number(maxUV) : null
+      minTemp: preferencias.tempMinima !== null && preferencias.tempMinima !== '' ? Number(preferencias.tempMinima) : null,
+      maxTemp: preferencias.tempMaxima !== null && preferencias.tempMaxima !== '' ? Number(preferencias.tempMaxima) : null,
+      maxWindSpeed: preferencias.vientoMaximo !== null && preferencias.vientoMaximo !== '' ? Number(preferencias.vientoMaximo) : null,
+      maxPrecipitationProbability: maxPrecipitationProbability !== null && maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
+      maxPrecipitationIntensity: preferencias.lluviaMaxima !== null && preferencias.lluviaMaxima !== '' ? Number(preferencias.lluviaMaxima) : null,
+      requiresNoPrecipitation: !!preferencias.permiteLluvia,
+      maxUv: preferencias.maxUV !== null && preferencias.maxUV !== '' ? Number(preferencias.maxUV) : null
     };
 
     try {
@@ -980,8 +1006,7 @@ export default function Dashboard() {
                     const maxLluvia = parseFloat(lluviaMaxima);
                     const minViento = parseFloat(vientoMinimo);
                     const maxViento = parseFloat(vientoMaximo);
-                    const max_uv = parseFloat(maxUV)
-                    // posibles errores
+
                     if (isNaN(minTemp) || isNaN(maxTemp)) {
                       showNotification('error', "Completa los rangos de temperatura");
                       return;
@@ -1008,37 +1033,29 @@ export default function Dashboard() {
                       return;
                     }
 
-                    if(maxUV < 0){
+                    if (maxUV < 0) {
                       showNotification('error', "Índice UV no puede tomar valores negativos");
                       return;
                     }
-                    // ningun error
+
+                    // GUARDAR preferencias SOLO si el usuario pulsa Guardar
+                    setPreferenciasClimaticasTemp({
+                      tempMinima,
+                      tempMaxima,
+                      permiteLluvia,
+                      lluviaMinima,
+                      lluviaMaxima,
+                      vientoMinimo,
+                      vientoMaximo,
+                      maxUV
+                    });
+
+                    limpiarCampos();
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-                    const preferenciasClimaticas = {
-                      actividadId: activityToEdit.id,
-                      temperatura: {
-                        minima: Number(tempMinima),
-                        maxima: Number(tempMaxima),
-                      },
-                      permiteLluvia,
-                      lluvia: permiteLluvia
-                        ? {
-                            minima: Number(lluviaMinima),
-                            maxima: Number(lluviaMaxima),
-                          }
-                        : null,
-                      viento: {
-                        minima: Number(vientoMinimo),
-                        maxima: Number(vientoMaximo),
-                      },
-                      max_uv: maxUV !== "" ? Number(maxUV) : null
-                    };
-                    console.log(preferenciasClimaticas); 
-                    limpiarCampos();
                   }}
                 >
                   Guardar
@@ -1046,12 +1063,13 @@ export default function Dashboard() {
                 <button
                   className="modal-agendar-button modal-agendar-button-secondary flex-1"
                   onClick={() => {
+                    limpiarCampos();
+                    setPreferenciasClimaticasTemp(null);
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-                    limpiarCampos();
                   }}
                 >
                   Cancelar
@@ -1059,12 +1077,18 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          
         )}
 
         {/* Modal para Agendar Actividad */}
         {agendarModalAbierto && (
-          <div className="modal-overlay " onClick={() => setAgendarModalAbierto(false)}>
+            <div
+              className="modal-overlay"
+              onClick={() => {
+                setAgendarModalAbierto(false);
+                limpiarCampos();
+                setPreferenciasClimaticasTemp(null);
+              }}
+            >
             <div className="modal-agendar-container z-40" onClick={(e) => e.stopPropagation()}>
               <div className="modal-agendar-content relative ">
 
@@ -1163,7 +1187,11 @@ export default function Dashboard() {
                     </button>
                     <button
                       className="modal-agendar-button modal-agendar-button-secondary"
-                      onClick={() => setAgendarModalAbierto(false)}
+                      onClick={() => {
+                        setAgendarModalAbierto(false);
+                        limpiarCampos();
+                        setPreferenciasClimaticasTemp(null); 
+                      }}
                     >
                       Cancelar
                     </button>
