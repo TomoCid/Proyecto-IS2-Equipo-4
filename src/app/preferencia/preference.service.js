@@ -56,7 +56,7 @@ export async function createPreference(user_id, activity_id, min_temp, max_temp,
  * @returns {boolean} Estado de la actividad 
  */
 
-export async function modifyPreference(user_id, activity_id, min_temp, max_temp, max_wind_speed, max_precipitation_probability,requires_no_precipitation, max_uv, is_active) {
+export async function modifyPreference(userId, activityId, updateData) {
     const query = `
         UPDATE "user_activity_preferences"
         SET min_temp = COALESCE($3, min_temp),
@@ -71,8 +71,8 @@ export async function modifyPreference(user_id, activity_id, min_temp, max_temp,
     `;
 
     const values = [
-        user_id,
-        activity_id,
+        userId,
+        activityId,
         updateData.min_temp,
         updateData.max_temp,
         updateData.max_wind_speed,
@@ -90,7 +90,7 @@ export async function modifyPreference(user_id, activity_id, min_temp, max_temp,
             throw new Error('Failed to modify preference');
         }
         return result.rows[0];
-      } finally {
+    } finally {
         client.release();
-      }
+    }
 }

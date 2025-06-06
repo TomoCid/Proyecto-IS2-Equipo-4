@@ -59,14 +59,12 @@ export default function Dashboard() {
   const [permiteLluvia, setPermiteLluvia] = useState(false);
   const [tempMinima, setTempMinima] = useState(null);
   const [tempMaxima, setTempMaxima] = useState(null);
-  const [lluviaMinima, setLluviaMinima] = useState(null);
+  const [lluviaProbMaxima, setlluviaProbMaxima] = useState(null);
   const [lluviaMaxima, setlluviaMaxima] = useState(null);
-  const [vientoMinimo, setVientoMinimo] = useState(null);
   const [vientoMaximo, setVientoMaximo] = useState(null);
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
   const [maxUV, setMaxUV] = useState('');
   const [periodicidad] = useState(0);
-  const [maxPrecipitationProbability, setMaxPrecipitationProbability] = useState('');
   const [requiresNoPrecipitation, setRequiresNoPrecipitation] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(null);
@@ -75,7 +73,7 @@ export default function Dashboard() {
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [errorRecommendations, setErrorRecommendations] = useState(null);
   const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
-
+  const [preferenciasClimaticasTemp, setPreferenciasClimaticasTemp] = useState(null);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
   
   // StarIcon para el modal de agendar
@@ -136,6 +134,19 @@ export default function Dashboard() {
     }
   }, [checkingAuth, usuario]);
   
+  // Sincronizar preferencias climáticas al abrir el modal de agendar
+  useEffect(() => {
+    if (agendarModalAbierto && preferenciasClimaticasTemp) {
+      setTempMinima(preferenciasClimaticasTemp.tempMinima);
+      setTempMaxima(preferenciasClimaticasTemp.tempMaxima);
+      setPermiteLluvia(preferenciasClimaticasTemp.permiteLluvia);
+      setlluviaMaxima(preferenciasClimaticasTemp.lluviaMaxima);
+      setVientoMaximo(preferenciasClimaticasTemp.vientoMaximo);
+      setlluviaProbMaxima(preferenciasClimaticasTemp.lluviaProbMaxima);
+      setMaxUV(preferenciasClimaticasTemp.maxUV);
+    }
+  }, [agendarModalAbierto]);
+
   // Intentar detectar ubicación inicial si no se ha hecho
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
@@ -160,13 +171,13 @@ export default function Dashboard() {
   }
 
   const limpiarCampos = () => {
-    setTempMinima(null);
-    setTempMaxima(null);
-    setLluviaMinima(null);
-    setlluviaMaxima(null);
-    setVientoMinimo(null);
-    setVientoMaximo(null);
-    setMaxUV(null)
+  setTempMinima(null);
+  setTempMaxima(null);
+  setlluviaProbMaxima(null);
+  setlluviaMaxima(null);
+  setVientoMaximo(null);
+  setMaxUV(null)
+  setRequiresNoPrecipitation(false);
   };
 
   async function handleRegistrarAgenda() {
@@ -195,6 +206,17 @@ export default function Dashboard() {
         }
       }
     }
+    const preferencias = preferenciasClimaticasTemp || {
+      tempMinima,
+      tempMaxima,
+      permiteLluvia,
+      lluviaMinima,
+      lluviaMaxima,
+      vientoMinimo,
+      vientoMaximo,
+      maxUV
+    };
+
     const entryData = {
       activityId: Number(actividadSeleccionada),
       periodicidad: periodicidad,
@@ -206,13 +228,13 @@ export default function Dashboard() {
       longitude: lon,
       reminderEnabled: reminderEnabled || false,
       reminderOffsetMinutes: reminderOffsetMinutes !== '' ? Number(reminderOffsetMinutes) : null,
-      minTemp: tempMinima !== '' ? Number(tempMinima) : null,
-      maxTemp: tempMaxima !== '' ? Number(tempMaxima) : null,
-      maxWindSpeed: vientoMaximo !== '' ? Number(vientoMaximo) : null,
-      maxPrecipitationProbability: maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
-      maxPrecipitationIntensity: lluviaMaxima !== '' ? Number(lluviaMaxima) : null,
-      requiresNoPrecipitation: !!permiteLluvia,
-      maxUv: maxUV !== '' ? Number(maxUV) : null
+      minTemp: preferencias.tempMinima !== null && preferencias.tempMinima !== '' ? Number(preferencias.tempMinima) : null,
+      maxTemp: preferencias.tempMaxima !== null && preferencias.tempMaxima !== '' ? Number(preferencias.tempMaxima) : null,
+      maxWindSpeed: preferencias.vientoMaximo !== null && preferencias.vientoMaximo !== '' ? Number(preferencias.vientoMaximo) : null,
+      maxPrecipitationProbability: preferencias.lluviaProbMaxima !== null && preferencias.lluviaProbMaxima !== '' ? Number(preferencias.lluviaProbMaxima) : null,
+      maxPrecipitationIntensity: preferencias.lluviaMaxima !== null && preferencias.lluviaMaxima !== '' ? Number(preferencias.lluviaMaxima) : null,
+      requiresNoPrecipitation: !!preferencias.permiteLluvia,
+      maxUv: preferencias.maxUV !== null && preferencias.maxUV !== '' ? Number(preferencias.maxUV) : null
     };
 
     try {
@@ -925,9 +947,9 @@ export default function Dashboard() {
                 <div className="flex gap-4">
                   <input
                     type="number"
-                    value={lluviaMinima ?? ''}
-                    placeholder="Precipitación mínima (mm)"
-                    onChange={(e) => setLluviaMinima(e.target.value)}
+                    value={lluviaProbMaxima ?? ''}
+                    placeholder="Probabilidad máx. de lluvia"
+                    onChange={(e) => setlluviaProbMaxima(e.target.value)}
                     className="modal-agendar-input"
                   />
                   <input
@@ -943,20 +965,13 @@ export default function Dashboard() {
               )}
               <h1 className='text-center'>Intensidad del Viento (km/h)</h1>
               <div className="flex gap-4">
-                <input
-                  type="number"
-                  value={vientoMinimo ?? ''}
-                  placeholder="Intensidad mínima de viento"
-                  onChange={(e) => setVientoMinimo(e.target.value)}
-                  className="modal-agendar-input"
-                />
-                <input
-                  type="number"
-                  value={vientoMaximo ?? ''}
-                  placeholder="Intensidad máxima de viento"
-                  onChange={(e) => setVientoMaximo(e.target.value)}
-                  className="modal-agendar-input"
-                />
+                  <input
+                    type="number"
+                    placeholder="Intensidad máxima de viento"
+                    onChange={(e) => setVientoMaximo(e.target.value)}
+                    className="modal-agendar-input"
+                  />
+
               </div>
 
               <h1 className='text-center'>Nivel UV máximo (Opcional)</h1>
@@ -973,15 +988,13 @@ export default function Dashboard() {
               <div className='flex gap-4'>
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
-                  onClick={() => {
+                  onClick={async () => {
                     const minTemp = parseFloat(tempMinima);
                     const maxTemp = parseFloat(tempMaxima);
-                    const minLluvia = parseFloat(lluviaMinima);
+                    const probMaxLluvia = parseFloat(lluviaProbMaxima);
                     const maxLluvia = parseFloat(lluviaMaxima);
-                    const minViento = parseFloat(vientoMinimo);
                     const maxViento = parseFloat(vientoMaximo);
-                    const max_uv = parseFloat(maxUV)
-                    // posibles errores
+
                     if (isNaN(minTemp) || isNaN(maxTemp)) {
                       showNotification('error', "Completa los rangos de temperatura");
                       return;
@@ -990,55 +1003,72 @@ export default function Dashboard() {
                       return;
                     }
 
-                    if (permiteLluvia && (
-                      isNaN(minLluvia) || isNaN(maxLluvia) ||
-                      minLluvia < 0 || maxLluvia < 0 ||
-                      maxLluvia < minLluvia
-                    )) {
+                    if (permiteLluvia && (isNaN(probMaxLluvia) || isNaN(maxLluvia) || probMaxLluvia < 0 || maxLluvia < 0 )) {
                       showNotification('error', "Valores de precipitación inválidos o incompletos");
                       return;
                     }
 
-                    if (
-                      isNaN(minViento) || isNaN(maxViento) ||
-                      minViento < 0 || maxViento < 0 ||
-                      maxViento < minViento
-                    ) {
-                      showNotification('error', "Valores de intensidad del viento inválidos o incompletos");
+                    if (isNaN(maxViento) ||  maxViento < 0) {
+                      showNotification('error', "Valores de intensidad del viento inválida o incompleta");
                       return;
                     }
 
-                    if(maxUV < 0){
+                    if (maxUV < 0) {
                       showNotification('error', "Índice UV no puede tomar valores negativos");
                       return;
                     }
-                    // ningun error
+
+                    if (activityToEdit) {
+                      // MODIFICAR preferencias de la actividad en el backend
+                      try {
+                        const token = sessionStorage.getItem('token');
+                        const res = await fetch(`/api/preference/${usuario.id}/${activityToEdit.id}`, {
+                          method: 'PUT',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                          },
+                          body: JSON.stringify({
+                            min_temp: minTemp,
+                            max_temp: maxTemp,
+                            max_wind_speed: maxViento,
+                            max_precipitation_probability: probMaxLluvia,
+                            max_precipitation_intensity: maxLluvia,
+                            permite_lluvia: permiteLluvia,
+                            max_uv: maxUV
+                          })
+                        });
+                        if (!res.ok) {
+                          const errorData = await res.json();
+                          showNotification('error', errorData.error || 'Error al modificar preferencias');
+                          return;
+                        }
+                        showNotification('success', 'Preferencias actualizadas');
+                        fetchUserActivities(); // Refresca la lista de actividades
+                      } catch (err) {
+                        showNotification('error', err.message || 'Error al modificar preferencias');
+                        return;
+                      }
+                    } else {
+                      // Guardar preferencias temporales para agendar
+                      setPreferenciasClimaticasTemp({
+                        tempMinima,
+                        tempMaxima,
+                        permiteLluvia,
+                        lluviaProbMaxima,
+                        lluviaMaxima,
+                        vientoMaximo,
+                        maxUV
+                      });
+                    }
+
+                    limpiarCampos();
                     setShowEditPreferences(false);
+                    setActivityToEdit(null);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-                    const preferenciasClimaticas = {
-                      actividadId: activityToEdit.id,
-                      temperatura: {
-                        minima: Number(tempMinima),
-                        maxima: Number(tempMaxima),
-                      },
-                      permiteLluvia,
-                      lluvia: permiteLluvia
-                        ? {
-                            minima: Number(lluviaMinima),
-                            maxima: Number(lluviaMaxima),
-                          }
-                        : null,
-                      viento: {
-                        minima: Number(vientoMinimo),
-                        maxima: Number(vientoMaximo),
-                      },
-                      max_uv: maxUV !== "" ? Number(maxUV) : null
-                    };
-                    console.log(preferenciasClimaticas); 
-                    limpiarCampos();
                   }}
                 >
                   Guardar
@@ -1046,12 +1076,13 @@ export default function Dashboard() {
                 <button
                   className="modal-agendar-button modal-agendar-button-secondary flex-1"
                   onClick={() => {
+                    limpiarCampos();
+                    setPreferenciasClimaticasTemp(null);
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
                       setAgendarModalAbierto(true);
                       setVieneDeAgendar(false);
                     }
-                    limpiarCampos();
                   }}
                 >
                   Cancelar
@@ -1059,12 +1090,18 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          
         )}
 
         {/* Modal para Agendar Actividad */}
         {agendarModalAbierto && (
-          <div className="modal-overlay " onClick={() => setAgendarModalAbierto(false)}>
+            <div
+              className="modal-overlay"
+              onClick={() => {
+                setAgendarModalAbierto(false);
+                limpiarCampos();
+                setPreferenciasClimaticasTemp(null);
+              }}
+            >
             <div className="modal-agendar-container z-40" onClick={(e) => e.stopPropagation()}>
               <div className="modal-agendar-content relative ">
 
@@ -1163,7 +1200,11 @@ export default function Dashboard() {
                     </button>
                     <button
                       className="modal-agendar-button modal-agendar-button-secondary"
-                      onClick={() => setAgendarModalAbierto(false)}
+                      onClick={() => {
+                        setAgendarModalAbierto(false);
+                        limpiarCampos();
+                        setPreferenciasClimaticasTemp(null); 
+                      }}
                     >
                       Cancelar
                     </button>
