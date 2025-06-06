@@ -65,7 +65,6 @@ export default function Dashboard() {
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
   const [maxUV, setMaxUV] = useState('');
   const [periodicidad] = useState(0);
-  const [maxPrecipitationProbability, setMaxPrecipitationProbability] = useState('');
   const [requiresNoPrecipitation, setRequiresNoPrecipitation] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderOffsetMinutes, setReminderOffsetMinutes] = useState(null);
@@ -141,10 +140,9 @@ export default function Dashboard() {
       setTempMinima(preferenciasClimaticasTemp.tempMinima);
       setTempMaxima(preferenciasClimaticasTemp.tempMaxima);
       setPermiteLluvia(preferenciasClimaticasTemp.permiteLluvia);
-      setLluviaMinima(preferenciasClimaticasTemp.lluviaMinima);
       setlluviaMaxima(preferenciasClimaticasTemp.lluviaMaxima);
-      setVientoMinimo(preferenciasClimaticasTemp.vientoMinimo);
       setVientoMaximo(preferenciasClimaticasTemp.vientoMaximo);
+      setlluviaProbMaxima(preferenciasClimaticasTemp.lluviaProbMaxima);
       setMaxUV(preferenciasClimaticasTemp.maxUV);
     }
   }, [agendarModalAbierto]);
@@ -233,7 +231,7 @@ export default function Dashboard() {
       minTemp: preferencias.tempMinima !== null && preferencias.tempMinima !== '' ? Number(preferencias.tempMinima) : null,
       maxTemp: preferencias.tempMaxima !== null && preferencias.tempMaxima !== '' ? Number(preferencias.tempMaxima) : null,
       maxWindSpeed: preferencias.vientoMaximo !== null && preferencias.vientoMaximo !== '' ? Number(preferencias.vientoMaximo) : null,
-      maxPrecipitationProbability: maxPrecipitationProbability !== null && maxPrecipitationProbability !== '' ? Number(maxPrecipitationProbability) : null,
+      maxPrecipitationProbability: preferencias.lluviaProbMaxima !== null && preferencias.lluviaProbMaxima !== '' ? Number(preferencias.lluviaProbMaxima) : null,
       maxPrecipitationIntensity: preferencias.lluviaMaxima !== null && preferencias.lluviaMaxima !== '' ? Number(preferencias.lluviaMaxima) : null,
       requiresNoPrecipitation: !!preferencias.permiteLluvia,
       maxUv: preferencias.maxUV !== null && preferencias.maxUV !== '' ? Number(preferencias.maxUV) : null
@@ -949,6 +947,7 @@ export default function Dashboard() {
                 <div className="flex gap-4">
                   <input
                     type="number"
+                    value={lluviaProbMaxima ?? ''}
                     placeholder="Probabilidad máx. de lluvia"
                     onChange={(e) => setlluviaProbMaxima(e.target.value)}
                     className="modal-agendar-input"
