@@ -58,9 +58,8 @@ export default function Dashboard() {
   const [permiteLluvia, setPermiteLluvia] = useState(false);
   const [tempMinima, setTempMinima] = useState(null);
   const [tempMaxima, setTempMaxima] = useState(null);
-  const [lluviaMinima, setLluviaMinima] = useState(null);
+  const [lluviaProbMaxima, setlluviaProbMaxima] = useState(null);
   const [lluviaMaxima, setlluviaMaxima] = useState(null);
-  const [vientoMinimo, setVientoMinimo] = useState(null);
   const [vientoMaximo, setVientoMaximo] = useState(null);
   const [vieneDeAgendar, setVieneDeAgendar] = useState(false);
   const [maxUV, setMaxUV] = useState(null);
@@ -156,9 +155,8 @@ export default function Dashboard() {
   const limpiarCampos = () => {
   setTempMinima(null);
   setTempMaxima(null);
-  setLluviaMinima(null);
+  setlluviaProbMaxima(null);
   setlluviaMaxima(null);
-  setVientoMinimo(null);
   setVientoMaximo(null);
   setMaxUV(null)
 };
@@ -904,8 +902,8 @@ export default function Dashboard() {
                 <div className="flex gap-4">
                   <input
                     type="number"
-                    placeholder="Precipitación mínima (mm)"
-                    onChange={(e) => setLluviaMinima(e.target.value)}
+                    placeholder="Probabilidad máx. de lluvia"
+                    onChange={(e) => setlluviaProbMaxima(e.target.value)}
                     className="modal-agendar-input"
                   />
                   <input
@@ -920,12 +918,6 @@ export default function Dashboard() {
               )}
               <h1 className='text-center'>Intensidad del Viento (km/h)</h1>             
               <div className="flex gap-4">
-                  <input
-                    type="number"
-                    placeholder="Intensidad mínima de viento"
-                    onChange={(e) => setVientoMinimo(e.target.value)}
-                    className="modal-agendar-input"
-                  />
                   <input
                     type="number"
                     placeholder="Intensidad máxima de viento"
@@ -946,9 +938,8 @@ export default function Dashboard() {
                   onClick={() => {
                     const minTemp = parseFloat(tempMinima);
                     const maxTemp = parseFloat(tempMaxima);
-                    const minLluvia = parseFloat(lluviaMinima);
+                    const probMaxLluvia = parseFloat(lluviaProbMaxima);
                     const maxLluvia = parseFloat(lluviaMaxima);
-                    const minViento = parseFloat(vientoMinimo);
                     const maxViento = parseFloat(vientoMaximo);
                     const max_uv = parseFloat(maxUV)
                     // posibles errores
@@ -960,21 +951,13 @@ export default function Dashboard() {
                       return;
                     }
 
-                    if (permiteLluvia && (
-                      isNaN(minLluvia) || isNaN(maxLluvia) ||
-                      minLluvia < 0 || maxLluvia < 0 ||
-                      maxLluvia < minLluvia
-                    )) {
+                    if (permiteLluvia && (isNaN(probMaxLluvia) || isNaN(maxLluvia) || probMaxLluvia < 0 || maxLluvia < 0 )) {
                       showNotification('error', "Valores de precipitación inválidos o incompletos");
                       return;
                     }
 
-                    if (
-                      isNaN(minViento) || isNaN(maxViento) ||
-                      minViento < 0 || maxViento < 0 ||
-                      maxViento < minViento
-                    ) {
-                      showNotification('error', "Valores de intensidad del viento inválidos o incompletos");
+                    if (isNaN(maxViento) ||  maxViento < 0) {
+                      showNotification('error', "Valores de intensidad del viento inválida o incompleta");
                       return;
                     }
 
@@ -998,12 +981,11 @@ export default function Dashboard() {
                       permiteLluvia,
                       lluvia: permiteLluvia
                         ? {
-                            minima: Number(lluviaMinima),
+                            probMaxima: Number(lluviaProbMaxima),
                             maxima: Number(lluviaMaxima),
                           }
                         : null,
                       viento: {
-                        minima: Number(vientoMinimo),
                         maxima: Number(vientoMaximo),
                       },
                       max_uv: maxUV !== "" ? Number(maxUV) : null
