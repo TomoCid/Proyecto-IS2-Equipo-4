@@ -361,6 +361,9 @@ body {
 .weatherIconLarge {
   width: 80px;
   height: 80px;
+  object-fit: contain; /* Asegura que la imagen se ajuste manteniendo su relación de aspecto */
+  display: block; /* Asegura que se comporte como un bloque */
+  margin: auto; /* Centra la imagen dentro de su contenedor flex */
 }
 
 .temperatureLarge {
@@ -683,7 +686,7 @@ body {
   background: #2f855a;
 }
 
-/* ===== CALENDARIO DE ACTIVIDADES ===== */
+/* ===== CALENDARIO DE ACTIVIDADES (MODAL) ===== */
 .calendar-modal-overlay {
   position: fixed;
   top: 0;
@@ -712,11 +715,21 @@ body {
   flex-direction: column;
 }
 
+/* ===== CALENDARIO DE ACTIVIDADES (VISTA PRINCIPAL) ===== */
+.calendar-main-view {
+  padding: var(--spacing-xl);
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  margin-top: var(--spacing-xl);
+}
+
 .calendar-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr; /* Mantiene la distribución en dos columnas */
   gap: var(--spacing-xl);
   margin-top: var(--spacing-md);
+  justify-content: center; /* Centra el contenido en el grid */
 }
 
 .react-calendar-custom {
@@ -798,8 +811,6 @@ body {
   background: #f8fafc;
   border-radius: 10px;
   padding: var(--spacing-lg);
-  overflow-y: auto;
-  max-height: 500px;
 }
 
 .calendar-selected-date {
@@ -1419,4 +1430,51 @@ body {
   font-size: 0.8em;
   color: #888;
   margin-top: 10px;
+}
+
+.view-toggle-switch {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg); /* Adjust margin as needed */
+  margin-bottom: var(--spacing-xl); /* Adjust margin as needed */
+}
+
+.toggle-switch-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--border-radius-lg); /* More rounded corners for the container */
+  background: var(--gray-light);
+  padding: var(--spacing-xs); /* Padding around the buttons */
+  transition: all 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); /* Inner shadow for depth */
+}
+
+.toggle-switch-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-lg); /* Match container radius */
+  font-size: 1rem; /* Slightly larger font */
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1; /* Make buttons take equal space */
+  text-align: center;
+  color: var(--text-light); /* Default text color */
+  background: transparent; /* Default background */
+}
+
+.toggle-switch-button:hover {
+  color: var(--primary-dark); /* Hover effect for inactive button */
+}
+
+.toggle-switch-button.active {
+  background: var(--primary);
+  color: var(--white);
+  box-shadow: var(--shadow); /* Shadow for active button */
+}
+
+.toggle-switch-button.active:hover {
+  background: var(--primary-dark); /* Darken primary on hover for active */
+  color: var(--white);
 }

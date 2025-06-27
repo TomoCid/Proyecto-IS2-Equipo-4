@@ -13,12 +13,12 @@ import '../styles/dashboard.css';
 export default function Dashboard() {
   const router = useRouter();
   
-  // Estados del usuario
+  // User states
   const [usuario, setUsuario] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
-  // Estados del clima
+  // Weather states
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -30,7 +30,7 @@ export default function Dashboard() {
   const [currentCiudad, setCurrentCiudad] = useState(null);
   const [initialLocationAttempted, setInitialLocationAttempted] = useState(false);
 
-  // Estados de actividades
+  // Activity states
   const [showSearch, setShowSearch] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -46,7 +46,7 @@ export default function Dashboard() {
     return activityDate === selectedDate;
   });
   
-  // Estados para el modal de agendar
+  // States for the schedule modal
   const [actividadSeleccionada, setActividadSeleccionada] = useState("");
   const [ciudadActividad, setCiudadActividad] = useState("");
   const [fechaActividad, setFechaActividad] = useState("");
@@ -54,7 +54,7 @@ export default function Dashboard() {
   const [horaTermino, setHoraTermino] = useState("");
   const [notasPreferencias, setNotasPreferencias] = useState('');
 
-  // estados del modal para editar preferencias
+  // States for the edit preferences modal
   const [activityToEdit, setActivityToEdit] = useState(null);
   const [permiteLluvia, setPermiteLluvia] = useState(false);
   const [tempMinima, setTempMinima] = useState(null);
@@ -75,8 +75,11 @@ export default function Dashboard() {
   const [forceRefreshRecommendations, setForceRefreshRecommendations] = useState(0);
   const [preferenciasClimaticasTemp, setPreferenciasClimaticasTemp] = useState(null);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
+
+  const [showMainWeatherView, setShowMainWeatherView] = useState(true); 
+  const [showScheduledActivitiesTab, setShowScheduledActivitiesTab] = useState(true);
   
-  // StarIcon para el modal de agendar
+  // StarIcon for the schedule modal
   const StarIcon = () => (
     <svg width="20" height="19" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M10 1.66669L12.575 6.88335L18.3334 7.72502L14.1667 11.7834L15.15 17.5167L10 14.8084L4.85002 17.5167L5.83335 11.7834L1.66669 7.72502L7.42502 6.88335L10 1.66669Z" 
@@ -84,7 +87,7 @@ export default function Dashboard() {
     </svg>
   );
 
-  // Verificar autenticación al cargar
+  // Check authentication on load
   useEffect(() => {
     console.log("[AUTH_EFFECT] Running authentication check effect. Current user:", usuario);
     const token = sessionStorage.getItem('token');
@@ -127,14 +130,14 @@ export default function Dashboard() {
     }
   }, [router]);
 
-  // Cargar actividades del usuario al iniciar sesión
   useEffect(() => {
-    if (!checkingAuth && usuario) { 
+    if (!checkingAuth && usuario && usuario.id) { 
+      console.log("[USER_ACTIVITIES_EFFECT] Triggering fetchUserActivities due to auth check complete and user ID present.");
       fetchUserActivities();
+      fetchScheduledActivities(); 
     }
-  }, [checkingAuth, usuario]);
+  }, [checkingAuth, usuario?.id]);
   
-  // Sincronizar preferencias climáticas al abrir el modal de agendar
   useEffect(() => {
     if (agendarModalAbierto && preferenciasClimaticasTemp) {
       setTempMinima(preferenciasClimaticasTemp.tempMinima);
@@ -145,9 +148,31 @@ export default function Dashboard() {
       setlluviaProbMaxima(preferenciasClimaticasTemp.lluviaProbMaxima);
       setMaxUV(preferenciasClimaticasTemp.maxUV);
     }
-  }, [agendarModalAbierto]);
+  }, [agendarModalAbierto, preferenciasClimaticasTemp]);
 
-  // Intentar detectar ubicación inicial si no se ha hecho
+  useEffect(() => {
+    console.log("[PREFERENCES_EFFECT] activityToEdit changed:", activityToEdit);
+    if (activityToEdit) {
+      console.log("[PREFERENCES_EFFECT] Activity to edit exists. Checking preferences:", activityToEdit.preferences);
+      if (activityToEdit.preferences && Object.keys(activityToEdit.preferences).length > 0) {
+        console.log("[PREFERENCES_EFFECT] Preferences found and not empty. Loading values.");
+        setTempMinima(activityToEdit.preferences.min_temp ?? null);
+        setTempMaxima(activityToEdit.preferences.max_temp ?? null);
+        setPermiteLluvia(activityToEdit.preferences.permite_lluvia ?? false);
+        setlluviaProbMaxima(activityToEdit.preferences.max_precipitation_probability ?? null);
+        setlluviaMaxima(activityToEdit.preferences.max_precipitation_intensity ?? null);
+        setVientoMaximo(activityToEdit.preferences.max_wind_speed ?? null);
+        setMaxUV(activityToEdit.preferences.max_uv ?? '');
+      } else {
+        console.log("[PREFERENCES_EFFECT] No preferences found or empty object. Cleaning fields.");
+        limpiarCampos();
+      }
+    } else {
+      console.log("[PREFERENCES_EFFECT] No activity selected (modal closed or reset). Cleaning fields.");
+      limpiarCampos();
+    }
+  }, [activityToEdit]);
+
   useEffect(() => {
     if (!checkingAuth && usuario && !initialLocationAttempted && !detectedLocation && !currentCiudad) {
       handleDetectLocation(); 
@@ -155,7 +180,6 @@ export default function Dashboard() {
     }
   }, [checkingAuth, usuario, initialLocationAttempted, detectedLocation, currentCiudad]);
 
-  // Función para cerrar sesión
   const handleLogout = () => {
     if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
       const actividadesKey = `actividades_${usuario?.email}`;
@@ -178,6 +202,7 @@ export default function Dashboard() {
   setVientoMaximo(null);
   setMaxUV(null)
   setRequiresNoPrecipitation(false);
+  setPermiteLluvia(false);
   };
 
   async function handleRegistrarAgenda() {
@@ -210,9 +235,9 @@ export default function Dashboard() {
       tempMinima,
       tempMaxima,
       permiteLluvia,
-      lluviaMinima,
+      lluviaMinima: null,
       lluviaMaxima,
-      vientoMinimo,
+      vientoMinimo: null,
       vientoMaximo,
       maxUV
     };
@@ -274,7 +299,16 @@ export default function Dashboard() {
       const userId = decoded.id || decoded.user_id;
 
       const res = await fetch(`/api/agenda/${userId}`);
-      if (!res.ok) throw new Error('No se pudieron cargar las actividades agendadas');
+      if (!res.ok) {
+        let errorMsg = 'No se pudieron cargar las actividades agendadas';
+        try {
+            const errorData = await res.json();
+            errorMsg = errorData.error || errorMsg;
+        } catch (jsonError) {
+            console.warn("Failed to parse error response for scheduled activities:", jsonError);
+        }
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       setScheduledActivities(data || []);
     } catch (err) {
@@ -298,10 +332,10 @@ export default function Dashboard() {
   }, [detectedLocation, currentCiudad, checkingAuth]); 
 
   useEffect(() => {
-    const currentUserId = usuario?.id; // Extraer el ID del usuario
+    const currentUserId = usuario?.id;
 
-    if (currentUserId) { // Solo proceder si tenemos un ID de usuario
-      const controller = new AbortController(); // Crear un AbortController
+    if (currentUserId) {
+      const controller = new AbortController();
       const signal = controller.signal;
 
       const fetchRecommendations = async () => {
@@ -311,8 +345,8 @@ export default function Dashboard() {
           const token = sessionStorage.getItem('token');
           if (!token) {
             setErrorRecommendations("Token de autenticación no encontrado.");
-            setActivityRecommendations([]); // Limpiar en caso de error de token
-            return; // Salir temprano
+            setActivityRecommendations([]);
+            return;
           }
           
           const apiUrl = `/api/users/${currentUserId}/agenda/recommendations`; 
@@ -339,7 +373,7 @@ export default function Dashboard() {
 
           const data = await res.json();
           setActivityRecommendations(data.recommendations || []);
-          setErrorRecommendations(null); // Limpiar error si fue exitoso
+          setErrorRecommendations(null);
 
         } catch (err) {
           if (err.name === 'AbortError') {
@@ -406,7 +440,7 @@ export default function Dashboard() {
     }
     setDetectStatus('loading');
     setDetectError(null);
-    //showNotification('loading', 'Detectando tu ubicación...');
+    showNotification('loading', 'Detectando tu ubicación...');
 
     const geoOptions = {
       enableHighAccuracy: true,
@@ -486,7 +520,6 @@ export default function Dashboard() {
   const loadScheduledActivities = async () => {
     try {
       await fetchScheduledActivities();
-      setShowCalendar(true);
     } catch (error) {
       showNotification('error', 'Error al cargar actividades');
     }
@@ -501,7 +534,6 @@ export default function Dashboard() {
     });
   };
 
-  // Funcion para cargar actividades del usuario
   const fetchUserActivities = async () => {
     console.log("[USER_ACTIVITIES] Fetching user activities. Current user state:", usuario);
     if (!usuario || !usuario.id) { 
@@ -518,7 +550,7 @@ export default function Dashboard() {
         throw new Error('No se pudieron cargar las actividades del usuario');
       }
       const data = await res.json();
-      console.log("[USER_ACTIVITIES] Data received:", data);
+      console.log("[USER_ACTIVITIES] Data received from API:", data);
       setUserActivities(data.activities || []);
     } catch (err) {
       console.error("[USER_ACTIVITIES] Error:", err);
@@ -526,10 +558,9 @@ export default function Dashboard() {
     }
   };
 
-  // Función para guardar actividad desde el modal de agendar
   const handleAgendarActividad = () => {
-    if (!actividadSeleccionada) {
-      showNotification('error', 'Por favor selecciona una actividad');
+    if (!actividadSeleccionada || !fechaActividad || !horaInicio || !horaTermino) {
+      showNotification('error', 'Completa los campos obligatorios');
       return;
     }
     if (horaInicio && horaTermino) {
@@ -558,7 +589,7 @@ export default function Dashboard() {
       time: `${horaInicio || '12:00'}${horaTermino ? ` - ${horaTermino}` : ''}`
     };
 
-    const actividadesKey = `actividades_${usuario?.email}`; // o username si prefieres
+    const actividadesKey = `actividades_${usuario?.email}`;
 
     const actividadesActualizadas = [...scheduledActivities, nuevaActividad];
     setScheduledActivities(actividadesActualizadas);
@@ -567,7 +598,6 @@ export default function Dashboard() {
     setAgendarModalAbierto(false);
     showNotification('success', 'Actividad agendada correctamente');
     setForceRefreshRecommendations(prev => prev + 1);
-    // Resetear campos
     setActividadSeleccionada("");
     setCiudadActividad("");
     setFechaActividad("");
@@ -582,36 +612,33 @@ export default function Dashboard() {
   const forecastSectionRef = useRef(null);
   const tooltipRef = useRef(null);
 
-  // Cierra el tooltip al hacer click fuera
-  useEffect(() => {
-    if (!showForecastTooltip) return;
-    function handleClickOutside(e) {
-      if (
-        tooltipRef.current &&
-        !tooltipRef.current.contains(e.target) &&
-        forecastSectionRef.current &&
-        !forecastSectionRef.current.contains(e.target)
-      ) {
-        setShowForecastTooltip(false);
-      }
+useEffect(() => {
+  if (!showForecastTooltip) return;
+  function handleClickOutside(e) {
+    if (
+      tooltipRef.current &&
+      !tooltipRef.current.contains(e.target) &&
+      forecastSectionRef.current &&
+      !forecastSectionRef.current.contains(e.target)
+    ) {
+      setShowForecastTooltip(false);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showForecastTooltip]);
+  }
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, [showForecastTooltip]);
 
-  // Muestra el tooltip cerca de la tarjeta clickeada
-  const handleForecastClick = (day, event) => {
-    setSelectedForecast(day);
-    setShowForecastTooltip(true);
+const handleForecastClick = (day, event) => {
+  setSelectedForecast(day);
+  setShowForecastTooltip(true);
 
-    // Calcula la posición a la derecha de la tarjeta
-    const cardRect = event.currentTarget.getBoundingClientRect();
-    setTooltipPosition({
-      top: cardRect.top + window.scrollY + cardRect.height / 2,
-      left: cardRect.right + window.scrollX + 16, // 16px de separación
-      align: 'right'
-    });
-  };
+  const cardRect = event.currentTarget.getBoundingClientRect();
+  setTooltipPosition({
+    top: cardRect.top + window.scrollY + cardRect.height / 2,
+    left: cardRect.right + window.scrollX + 16, 
+    align: 'right'
+  });
+};
 
   const handleSaveNewActivity = () => {
     fetchUserActivities(); 
@@ -622,7 +649,7 @@ export default function Dashboard() {
   if (checkingAuth) {
     return ( 
       <div className="flex justify-center items-center min-h-screen">
-        <p>Verificando sesión...</p> {/* O un spinner */}
+        <p>Verificando sesión...</p>
       </div>
     );
   }
@@ -636,7 +663,6 @@ export default function Dashboard() {
   }
   return (
     <div className="appWrapper">
-      {/* Botón de ajustes en la esquina superior derecha */}
       <div className="absolute top-5 right-5 z-50">
         <div className="relative">
           <FiSettings 
@@ -656,7 +682,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Notificación flotante */}
       {notification && (
         <div className={`notification notification-${notification.type}`}>
           <div className="notification-content">
@@ -674,10 +699,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Sidebar*/}
       <aside className="sidebar">
         <div className="sidebar-content">
-          {/* Botón de búsqueda */}
           <div className="sidebar-item">
             <button 
               className="sidebar-button" 
@@ -704,7 +727,6 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Botón de ubicación */}
           <div className="sidebar-item">
             <button 
               className="sidebar-button"
@@ -718,33 +740,18 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Botón de actividades */}
           <div className="sidebar-item">
             <button 
               className="sidebar-button"
               onClick={() => {
                 setShowActivities(!showActivities);
-                setShowAddActivity(false);
-                if (!showActivities) fetchUserActivities();
+                setShowAddActivity(false); 
               }}
             >
               <FiBookmark className="sidebar-icon" />
               <span>Mis actividades</span>
             </button>
           </div>
-
-          {/* Botón de Calendario */}
-          <div className="sidebar-item">
-            <button 
-              className="sidebar-button"
-              onClick={loadScheduledActivities}
-            >
-              <FiCalendar className="sidebar-icon" />
-              <span>Calendario</span>
-            </button>
-          </div>
-
-          {/* Nuevo botón para agendar actividad */}
           <div className="sidebar-item">
             <button 
               className="sidebar-button"
@@ -757,7 +764,6 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* Contenido principal */}
       <main className="dashboardContainer">
         <header className="userHeader">
           <h1 className="title">👋 ¡Bienvenido, {usuario.username}!</h1>
@@ -767,6 +773,38 @@ export default function Dashboard() {
               🌍 <strong>{weatherData.location.name}, {weatherData.location.region}</strong>
             </p>
           )}
+
+          <div className="view-toggle-switch">
+            <div className="toggle-switch-container">
+              <button
+                className={`toggle-switch-button ${
+                  showMainWeatherView ? 'active' : ''
+                }`}
+                onClick={() => {
+                  setShowMainWeatherView(true);
+                  setShowActivities(false);
+                  setAgendarModalAbierto(false);
+                  setShowCalendar(false); 
+                }}
+              >
+                Clima
+              </button>
+              <button
+                className={`toggle-switch-button ${
+                  !showMainWeatherView ? 'active' : ''
+                }`}
+                onClick={async () => {
+                  setShowMainWeatherView(false);
+                  setShowActivities(false);
+                  setAgendarModalAbierto(false);
+                  setShowCalendar(false); 
+                  setShowScheduledActivitiesTab(true); 
+                }}
+              >
+                Calendario
+              </button>
+            </div>
+          </div>
         </header>
 
         {loading && (
@@ -786,82 +824,6 @@ export default function Dashboard() {
             <FiAlertCircle /> {detectError}
           </div>
         )}
-
-        {/* Modal de Calendario */}
-        {showCalendar && (
-          <div className="calendar-modal-overlay">
-            <div className="calendar-modal">
-              <div className="modal-header">
-                <h2>Mis Actividades Agendadas</h2>
-                <button
-                  className="modal-close-button"
-                  onClick={() => {
-                    setShowCalendar(false);
-                    setForceRefreshRecommendations(prev => prev + 1); // Actualizar aquí
-                  }}
-                  aria-label="Cerrar calendario"
-                >
-                  <FiX className="close-icon" />
-                </button>
-              </div>
-              
-              <div className="calendar-container">
-                <Calendar
-                  onChange={setCalendarDate}
-                  value={calendarDate}
-                  locale="es"
-                  className="react-calendar-custom"
-                  tileContent={({ date, view }) => {
-                    if (view === 'month') {
-                      const hasActivity = scheduledActivities.some(
-                        activity => new Date(activity.fecha).toDateString() === date.toDateString()
-                      );
-                      return hasActivity ? <div className="calendar-activity-dot" /> : null;
-                    }
-                  }}
-                />
-                
-                <div className="calendar-activities-container">
-                  <h3 className="calendar-selected-date">
-                    {formatDate(calendarDate)}
-                  </h3>
-                  
-                  {activitiesForSelectedDate.length > 0 ? (
-                    <div className="activities-list">
-                      {activitiesForSelectedDate.map(activity => {
-                        const activityName = activity.actividad_nombre || 'Sin nombre';
-                        const horaInicio = activity.hora_inicio ? activity.hora_inicio.slice(0,5) : '--:--';
-                        const horaFin = activity.hora_fin ? activity.hora_fin.slice(0,5) : '--:--';
-                        return (
-                          <div key={activity.agenda_id || activity.id} className="activity-card">
-                            <div className="activity-time">
-                              <FiClock className="activity-icon" />
-                              {horaInicio} - {horaFin}
-                            </div>
-                            <div className="activity-content">
-                              <h4>{activityName}</h4>
-                              {activity.notes && (
-                                <p className="activity-description">
-                                  {activity.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="no-activities">
-                      No hay actividades programadas para este día
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Actividades */}
         {showActivities && (
           <div className="modal-overlay">
             <div className="modal-content">
@@ -873,11 +835,9 @@ export default function Dashboard() {
               </button>
               
               <h2>Mis Actividades</h2>
-
-              {/* --- BOTÓN PARA ABRIR EL MODAL DE CREACIÓN DE ACTIVIDAD --- */}
               <button
                 onClick={() => setShowCreateActivityModal(true)}
-                className="create-activity-button" // Añade estilos para esta clase en tu CSS
+                className="create-activity-button" 
               >
                 <FiPlus /> Crear Nueva Actividad
               </button>
@@ -892,7 +852,7 @@ export default function Dashboard() {
                       )}
                       <button
                         className="settings-button absolute top-2 right-2"
-                        onClick={() => handleEditPreferences(activity)} // Esto usa tu modal de preferencias simple
+                        onClick={() => handleEditPreferences(activity)}
                       >
                         <MdSettings size={20} />
                       </button>
@@ -906,7 +866,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Modal de edición de preferencias climáticas*/}
         {showEditPreferences && (
           <div className="fixed modal-overlay z-50">
             <div className="modal-content flex flex-col gap-y-4 z-50">
@@ -915,17 +874,21 @@ export default function Dashboard() {
               <div className='flex gap-4'>
                 <input
                   type="number"
-                  value={tempMinima ?? ''}
-                  onChange={(e) => setTempMinima(e.target.value)}
+                  value={tempMinima || ''}
+                  onChange={(e) => setTempMinima(e.target.value === '' ? null : Number(e.target.value))}
                   placeholder="Temperatura Mínima"
                   className="modal-agendar-input"
+                  min="-100"
+                  max="100"
                 />
                 <input
                   type="number"
-                  value={tempMaxima ?? ''}
-                  onChange={(e) => setTempMaxima(e.target.value)}
+                  value={tempMaxima || ''}
+                  onChange={(e) => setTempMaxima(e.target.value === '' ? null : Number(e.target.value))}
                   placeholder="Temperatura Máxima"
                   className="modal-agendar-input"
+                  min="-100"
+                  max="100"
                 />
               </div>
 
@@ -947,17 +910,21 @@ export default function Dashboard() {
                 <div className="flex gap-4">
                   <input
                     type="number"
-                    value={lluviaProbMaxima ?? ''}
+                    value={lluviaProbMaxima || ''} 
                     placeholder="Probabilidad máx. de lluvia"
-                    onChange={(e) => setlluviaProbMaxima(e.target.value)}
+                    onChange={(e) => setlluviaProbMaxima(e.target.value === '' ? null : Number(e.target.value))}
                     className="modal-agendar-input"
+                    min="0"
+                    max="100"
                   />
                   <input
                     type="number"
-                    value={lluviaMaxima ?? ''}
+                    value={lluviaMaxima || ''} 
                     placeholder="Precipitación máxima (mm)"
-                    onChange={(e) => setlluviaMaxima(e.target.value)}
+                    onChange={(e) => setlluviaMaxima(e.target.value === '' ? null : Number(e.target.value))}
                     className="modal-agendar-input"
+                    min="0"
+                    max="500"
                   />
                 </div>
               ) : (
@@ -967,9 +934,12 @@ export default function Dashboard() {
               <div className="flex gap-4">
                   <input
                     type="number"
+                    value={vientoMaximo || ''} 
                     placeholder="Intensidad máxima de viento"
-                    onChange={(e) => setVientoMaximo(e.target.value)}
+                    onChange={(e) => setVientoMaximo(e.target.value === '' ? null : Number(e.target.value))}
                     className="modal-agendar-input"
+                    min="0"
+                    max="300"
                   />
 
               </div>
@@ -978,10 +948,12 @@ export default function Dashboard() {
               <div className="flex gap-4">
                 <input
                   type="number"
-                  value={maxUV ?? ''}
+                  value={maxUV || ''} 
                   placeholder="Nivel UV máximo"
-                  onChange={(e) => setMaxUV(e.target.value)}
+                  onChange={(e) => setMaxUV(e.target.value === '' ? null : Number(e.target.value))}
                   className="modal-agendar-input"
+                  min="0"
+                  max="20"
                 />
               </div>
 
@@ -989,77 +961,88 @@ export default function Dashboard() {
                 <button
                   className="modal-agendar-button modal-agendar-button-primary flex-1"
                   onClick={async () => {
-                    const minTemp = parseFloat(tempMinima);
-                    const maxTemp = parseFloat(tempMaxima);
-                    const probMaxLluvia = parseFloat(lluviaProbMaxima);
-                    const maxLluvia = parseFloat(lluviaMaxima);
-                    const maxViento = parseFloat(vientoMaximo);
+                    const parsedMinTemp = tempMinima === null || tempMinima === '' ? null : Number(tempMinima);
+                    const parsedMaxTemp = tempMaxima === null || tempMaxima === '' ? null : Number(tempMaxima);
+                    const parsedProbMaxLluvia = lluviaProbMaxima === null || lluviaProbMaxima === '' ? null : Number(lluviaProbMaxima);
+                    const parsedMaxLluvia = lluviaMaxima === null || lluviaMaxima === '' ? null : Number(lluviaMaxima);
+                    const parsedMaxViento = vientoMaximo === null || vientoMaximo === '' ? null : Number(vientoMaximo);
+                    const parsedMaxUV = maxUV === null || maxUV === '' ? null : Number(maxUV);
 
-                    if (isNaN(minTemp) || isNaN(maxTemp)) {
-                      showNotification('error', "Completa los rangos de temperatura");
-                      return;
-                    } else if (maxTemp < minTemp) {
+
+                    if (parsedMinTemp !== null && parsedMaxTemp !== null && parsedMaxTemp < parsedMinTemp) {
                       showNotification('error', "Temperatura máxima no puede ser inferior a temperatura mínima");
                       return;
                     }
-
-                    if (permiteLluvia && (isNaN(probMaxLluvia) || isNaN(maxLluvia) || probMaxLluvia < 0 || maxLluvia < 0 )) {
+                    if (permiteLluvia && (parsedProbMaxLluvia === null || isNaN(parsedProbMaxLluvia) || parsedProbMaxLluvia < 0 || parsedMaxLluvia === null || isNaN(parsedMaxLluvia) || parsedMaxLluvia < 0 )) {
                       showNotification('error', "Valores de precipitación inválidos o incompletos");
                       return;
                     }
-
-                    if (isNaN(maxViento) ||  maxViento < 0) {
+                    if (parsedMaxViento === null || isNaN(parsedMaxViento) || parsedMaxViento < 0) {
                       showNotification('error', "Valores de intensidad del viento inválida o incompleta");
                       return;
                     }
-
-                    if (maxUV < 0) {
+                    if (parsedMaxUV !== null && parsedMaxUV < 0) {
                       showNotification('error', "Índice UV no puede tomar valores negativos");
                       return;
                     }
 
+
                     if (activityToEdit) {
-                      // MODIFICAR preferencias de la actividad en el backend
+                      const isUpdate = activityToEdit.preferences && Object.keys(activityToEdit.preferences).length > 0;
+                      const method = isUpdate ? 'PUT' : 'POST';
+                      const url = isUpdate 
+                          ? `/api/preference/${usuario.id}/${activityToEdit.id}` 
+                          : `/api/preference/${usuario.id}`; 
+
+                      const bodyData = {
+                          activityId: activityToEdit.id, 
+                          min_temp: parsedMinTemp,
+                          max_temp: parsedMaxTemp,
+                          max_wind_speed: parsedMaxViento,
+                          max_precipitation_probability: parsedProbMaxLluvia,
+                          max_precipitation_intensity: parsedMaxLluvia,
+                          permite_lluvia: permiteLluvia,
+                          max_uv: parsedMaxUV
+                      };
+
                       try {
                         const token = sessionStorage.getItem('token');
-                        const res = await fetch(`/api/preference/${usuario.id}/${activityToEdit.id}`, {
-                          method: 'PUT',
+                        const res = await fetch(url, {
+                          method: method,
                           headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                           },
-                          body: JSON.stringify({
-                            min_temp: minTemp,
-                            max_temp: maxTemp,
-                            max_wind_speed: maxViento,
-                            max_precipitation_probability: probMaxLluvia,
-                            max_precipitation_intensity: maxLluvia,
-                            permite_lluvia: permiteLluvia,
-                            max_uv: maxUV
-                          })
+                          body: JSON.stringify(bodyData)
                         });
+
+                        const contentType = res.headers.get('content-type');
                         if (!res.ok) {
-                          const errorData = await res.json();
-                          showNotification('error', errorData.error || 'Error al modificar preferencias');
+                          let errorMsg = 'Error al guardar preferencias';
+                          if (contentType && contentType.includes('application/json')) {
+                            const errorData = await res.json();
+                            errorMsg = errorData.error || errorMsg;
+                          } else {
+                            const errorText = await res.text(); 
+                            console.error("Non-JSON error response:", errorText);
+                            errorMsg = `Error del servidor: ${res.status} ${res.statusText}.`;
+                          }
+                          showNotification('error', errorMsg);
                           return;
                         }
-                        showNotification('success', 'Preferencias actualizadas');
-                        fetchUserActivities(); // Refresca la lista de actividades
+
+                        if (contentType && contentType.includes('application/json')) {
+                            await res.json(); 
+                        } else {
+                            console.log("Successful response, but not JSON (e.g., 204 No Content).");
+                        }
+                        
+                        showNotification('success', `Preferencias ${isUpdate ? 'actualizadas' : 'guardadas'} correctamente`);
+                        fetchUserActivities(); 
                       } catch (err) {
-                        showNotification('error', err.message || 'Error al modificar preferencias');
+                        showNotification('error', err.message || 'Error de conexión al guardar preferencias');
                         return;
                       }
-                    } else {
-                      // Guardar preferencias temporales para agendar
-                      setPreferenciasClimaticasTemp({
-                        tempMinima,
-                        tempMaxima,
-                        permiteLluvia,
-                        lluviaProbMaxima,
-                        lluviaMaxima,
-                        vientoMaximo,
-                        maxUV
-                      });
                     }
 
                     limpiarCampos();
@@ -1091,8 +1074,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* Modal para Agendar Actividad */}
         {agendarModalAbierto && (
             <div
               className="modal-overlay"
@@ -1215,242 +1196,350 @@ export default function Dashboard() {
           </div>
         )}
 
-        {usuario?.id && ( // Asegúrate que usuario.id exista antes de renderizar
+        {usuario?.id && (
           <ActivityFormModal
             isOpen={showCreateActivityModal}
             onClose={() => setShowCreateActivityModal(false)}
             userId={usuario.id}
-            activityToEdit={null} // Siempre null para "Crear Nueva Actividad" desde este botón
+            activityToEdit={null}
             onSave={handleSaveNewActivity}
           />
         )}
 
-         {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && detectStatus === 'idle' && (
-            <div className="welcome-message">
-              <h2>Consulta el clima de cualquier ciudad</h2>
-              <p>Intentando obtener tu ubicación actual o usa el buscador...</p>
-            </div>
-          )}
-      
-          {/* Mostrar mensaje si la detección inicial falló y no hay ciudad buscada */}
-          {!weatherData && !loading && !currentCiudad && detectStatus === 'error' && initialLocationAttempted && (
-            <div className="welcome-message">
-              <h2>No se pudo obtener tu ubicación automáticamente</h2>
-              <p>Por favor, usa el buscador para consultar el clima de una ciudad, o intenta detectar tu ubicación de nuevo.</p>
-              {detectError && <p className="text-red-500 mt-2">{detectError}</p>}
-            </div>
-          )}
-
-        {weatherData && !showCalendar && !showActivities && !agendarModalAbierto && (
-          <div className="weatherContent">
-            <div className="weatherMainCard">
-              <div className="currentWeatherSection compact">
-                <div className="weatherIconContainer">
-                  <img
-                    className="weatherIconLarge"
-                    src={`https:${weatherData.current.condition.icon}`}
-                    alt={weatherData.current.condition.text}
-                  />
-                </div>
-                <div className="temperatureLarge">
-                  {Math.round(weatherData.current.temp_c)}<span className="degree">°C</span>
-                </div>
-                <div className="conditionTextLarge">
-                  {weatherData.current.condition.text}
-                </div>
-              </div>
-              <div className="weatherDetailsGrid compact">
-                {[
-                  { emoji: '💧', label: 'Humedad', value: `${weatherData.current.humidity}%` },
-                  { emoji: '🌬️', label: 'Viento', value: `${weatherData.current.wind_kph} km/h` },
-                  { emoji: '☁️', label: 'Nubosidad', value: `${weatherData.current.cloud}%` },
-                  { emoji: '🌡️', label: 'Sensación', value: `${Math.round(weatherData.current.feelslike_c)}°C` },
-                  { emoji: '🌅', label: 'Amanecer', value: weatherData.forecast.forecastday[0].astro.sunrise },
-                  { emoji: '🌇', label: 'Atardecer', value: weatherData.forecast.forecastday[0].astro.sunset },
-                  { emoji: '🧭', label: 'Presión', value: `${weatherData.current.pressure_mb} hPa` },
-                  { emoji: '👁️', label: 'Visibilidad', value: `${weatherData.current.vis_km} km` },
-                  { emoji: '🔆', label: 'Índice UV', value: weatherData.current.uv },
-                  { emoji: '🌧️', label: 'Precipitación', value: `${weatherData.current.precip_mm} mm` },
-                  { emoji: '💦', label: 'Punto de rocío', value: `${weatherData.current.dewpoint_c ?? '-'}°C` },
-                ].map((item, index) => (
-                  <div key={index} className="detailCard">
-                    <span className="emoji">{item.emoji}</span>
-                    <div className="label">{item.label}</div>
-                    <div className="value">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="sevenDayForecast">
-              <h3 className="forecastsectionTitle">Próximos días</h3>
-              <div className="forecastsection" ref={forecastSectionRef}>
-                {weatherData.forecast.forecastday.slice(1, 7).map((day, index) => (
-                  <div
-                    key={day.date_epoch}
-                    className="detailCard forecastCard"
-                    onClick={(e) => handleForecastClick(day, e)}
-                  >
-                    <div className="dayName">
-                      {index === 0 ? '📅 Hoy' : new Date(day.date).toLocaleDateString('es-CL', { weekday: 'long' })}
-                    </div>
-                    <img
-                      src={`https:${day.day.condition.icon}`}
-                      alt={day.day.condition.text}
-                      className="forecastIcon"
-                    />
-                    <div className="label">{day.day.condition.text}</div>
-                    <div className="value">
-                      {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Tooltip de datos secundarios */}
-              {showForecastTooltip && selectedForecast && (
-                <div
-                  className="forecast-tooltip"
-                  ref={tooltipRef}
-                  style={{
-                    position: 'absolute',
-                    top: tooltipPosition.top,
-                    left: tooltipPosition.left,
-                    zIndex: 2000,
-                  }}
-                >
-                  <h4>
-                    {new Date(selectedForecast.date).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' })}
-                  </h4>
-                  <ul>
-                    <li><span className="tooltip-label">Humedad:</span>💧 {selectedForecast.day.avghumidity}%</li>
-                    <li><span className="tooltip-label">Viento:</span>🌬️ {selectedForecast.day.maxwind_kph} km/h</li>
-                    <li><span className="tooltip-label">Nubosidad:</span>☁️ {selectedForecast.day.daily_chance_of_cloud ?? '-'}%</li>
-                    <li><span className="tooltip-label">Sensación:</span>🌡️ {Math.round(selectedForecast.day.avgtemp_c)}°C</li>
-                    <li><span className="tooltip-label">Amanecer:</span>🌅 {selectedForecast.astro.sunrise}</li>
-                    <li><span className="tooltip-label">Atardecer:</span>🌇 {selectedForecast.astro.sunset}</li>
-                    <li><span className="tooltip-label">Presión:</span>🧭 {selectedForecast.day.pressure_mb ?? '-'} hPa</li>
-                    <li><span className="tooltip-label">Visibilidad:</span>👁️ {selectedForecast.day.avgvis_km ?? '-'} km</li>
-                    <li><span className="tooltip-label">UV:</span>🔆 {selectedForecast.day.uv}</li>
-                    <li><span className="tooltip-label">Precipitación:</span>🌧️ {selectedForecast.day.totalprecip_mm} mm</li>
-                    <li><span className="tooltip-label">Rocío:</span>💦 {selectedForecast.day.dewpoint_c ?? '-'}°C</li>
-                  </ul>
+        {showMainWeatherView ? (
+          <>
+            {!weatherData && !loading && !error && !showCalendar && !showActivities && !agendarModalAbierto && detectStatus === 'idle' && (
+                <div className="welcome-message">
+                  <h2>Consulta el clima de cualquier ciudad</h2>
+                  <p>Intentando obtener tu ubicación actual o usa el buscador...</p>
                 </div>
               )}
-            </div>
+              {!weatherData && !loading && !currentCiudad && detectStatus === 'error' && initialLocationAttempted && (
+                <div className="welcome-message">
+                  <h2>No se pudo obtener tu ubicación automáticamente</h2>
+                  <p>Por favor, usa el buscador para consultar el clima de una ciudad, o intenta detectar tu ubicación de nuevo.</p>
+                  {detectError && <p className="text-red-500 mt-2">{detectError}</p>}
+                </div>
+              )}
 
-            <div>
-              {/* Activity Recommendations Section */}
-              {!showCalendar && !showActivities && !agendarModalAbierto && (
-                <div className="activityRecommendationsSection">
-                  <h3 className="recommendationsTitle">Recomendaciones de Actividades Agendadas</h3>
-                  {loadingRecommendations && <p>Cargando recomendaciones...</p>}
-                  {errorRecommendations && <p className="statusBubble error">Error: {errorRecommendations}</p>}
-                  
-                  {!loadingRecommendations && !errorRecommendations && activityRecommendations.length === 0 && (
-                    <p>No hay recomendaciones disponibles o no tienes actividades próximas agendadas.</p>
+            {weatherData && (
+              <div className="weatherContent">
+                <div className="weatherMainCard">
+                  <div className="currentWeatherSection compact">
+                    <div className="weatherIconContainer">
+                      <img
+                        className="weatherIconLarge"
+                        src={`https:${weatherData.current.condition.icon}`}
+                        alt={weatherData.current.condition.text}
+                      />
+                    </div>
+                    <div className="temperatureLarge">
+                      {Math.round(weatherData.current.temp_c)}<span className="degree">°C</span>
+                    </div>
+                    <div className="conditionTextLarge">
+                      {weatherData.current.condition.text}
+                    </div>
+                  </div>
+                  <div className="weatherDetailsGrid compact">
+                    {[
+                      { emoji: '💧', label: 'Humedad', value: `${weatherData.current.humidity}%` },
+                      { emoji: '🌬️', label: 'Viento', value: `${weatherData.current.wind_kph} km/h` },
+                      { emoji: '☁️', label: 'Nubosidad', value: `${weatherData.current.cloud}%` },
+                      { emoji: '🌡️', label: 'Sensación', value: `${Math.round(weatherData.current.feelslike_c)}°C` },
+                      { emoji: '🌅', label: 'Amanecer', value: weatherData.forecast.forecastday[0].astro.sunrise },
+                      { emoji: '🌇', label: 'Atardecer', value: weatherData.forecast.forecastday[0].astro.sunset },
+                      { emoji: '🧭', label: 'Presión', value: `${weatherData.current.pressure_mb} hPa` },
+                      { emoji: '👁️', label: 'Visibilidad', value: `${weatherData.current.vis_km} km` },
+                      { emoji: '🔆', label: 'Índice UV', value: weatherData.current.uv },
+                      { emoji: '🌧️', label: 'Precipitación', value: `${weatherData.current.precip_mm} mm` },
+                      { emoji: '💦', label: 'Punto de rocío', value: `${weatherData.current.dewpoint_c ?? '-'}°C` },
+                    ].map((item, index) => (
+                      <div key={index} className="detailCard">
+                        <span className="emoji">{item.emoji}</span>
+                        <div className="label">{item.label}</div>
+                        <div className="value">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sevenDayForecast">
+                  <h3 className="forecastsectionTitle">Próximos días</h3>
+                  <div className="forecastsection" ref={forecastSectionRef}>
+                    {weatherData.forecast.forecastday.slice(1, 7).map((day, index) => (
+                      <div
+                        key={day.date_epoch}
+                        className="detailCard forecastCard"
+                        onClick={(e) => handleForecastClick(day, e)}
+                      >
+                        <div className="dayName">
+                          {index === 0 ? '📅 Hoy' : new Date(day.date).toLocaleDateString('es-CL', { weekday: 'long' })}
+                        </div>
+                        <img
+                          src={`https:${day.day.condition.icon}`}
+                          alt={day.day.condition.text}
+                          className="forecastIcon"
+                        />
+                        <div className="label">{day.day.condition.text}</div>
+                        <div className="value">
+                          {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {showForecastTooltip && selectedForecast && (
+                    <div
+                      className="forecast-tooltip"
+                      ref={tooltipRef}
+                      style={{
+                        position: 'absolute',
+                        top: tooltipPosition.top,
+                        left: tooltipPosition.left,
+                        zIndex: 2000,
+                      }}
+                    >
+                      <h4>
+                        {new Date(selectedForecast.date).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' })}
+                      </h4>
+                      <ul>
+                        <li><span className="tooltip-label">Humedad:</span>💧 {selectedForecast.day.avghumidity}%</li>
+                        <li><span className="tooltip-label">Viento:</span>🌬️ {selectedForecast.day.maxwind_kph} km/h</li>
+                        <li><span className="tooltip-label">Nubosidad:</span>☁️ {selectedForecast.day.daily_chance_of_cloud ?? '-'}%</li>
+                        <li><span className="tooltip-label">Sensación:</span>🌡️ {Math.round(selectedForecast.day.avgtemp_c)}°C</li>
+                        <li><span className="tooltip-label">Amanecer:</span>🌅 {selectedForecast.astro.sunrise}</li>
+                        <li><span className="tooltip-label">Atardecer:</span>🌇 {selectedForecast.astro.sunset}</li>
+                        <li><span className="tooltip-label">Presión:</span>🧭 {selectedForecast.day.pressure_mb ?? '-'} hPa</li>
+                        <li><span className="tooltip-label">Visibilidad:</span>👁️ {selectedForecast.day.avgvis_km ?? '-'} km</li>
+                        <li><span className="tooltip-label">UV:</span>🔆 {selectedForecast.day.uv}</li>
+                        <li><span className="tooltip-label">Precipitación:</span>🌧️ {selectedForecast.day.totalprecip_mm} mm</li>
+                        <li><span className="tooltip-label">Rocío:</span>💦 {selectedForecast.day.dewpoint_c ?? '-'}°C</li>
+                      </ul>
+                    </div>
                   )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="calendar-main-view">
+            <h2 className="title text-center mb-8">Mi Calendario de Actividades</h2>
+            <div className="calendar-container grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Calendar
+                onChange={setCalendarDate}
+                value={calendarDate}
+                locale="es"
+                className="react-calendar-custom mx-auto max-w-full"
+                tileContent={({ date, view }) => {
+                  if (view === 'month') {
+                    const hasScheduled = scheduledActivities.some(
+                      activity => new Date(activity.fecha).toDateString() === date.toDateString()
+                    );
+                    const hasRecommendationForDay = activityRecommendations.some(
+                      rec => new Date(rec.fecha).toDateString() === date.toDateString()
+                    );
+                    const hasActivity = hasScheduled || hasRecommendationForDay;
+                    return hasActivity ? <div className="calendar-activity-dot" /> : null;
+                  }
+                }}
+              />
+              
+              <div className="calendar-activities-container">
+                <h3 className="calendar-selected-date">
+                  {formatDate(calendarDate)}
+                </h3>
 
-                  {!loadingRecommendations && !errorRecommendations && activityRecommendations.length > 0 && (
-                    <div className="recommendationsGrid">
-                      {activityRecommendations.map(rec => {
+                <div className="view-toggle-switch mb-4">
+                  <div className="toggle-switch-container">
+                    <button
+                      className={`toggle-switch-button ${showScheduledActivitiesTab ? 'active' : ''}`}
+                      onClick={() => setShowScheduledActivitiesTab(true)}
+                    >
+                      Agendadas
+                    </button>
+                    <button
+                      className={`toggle-switch-button ${!showScheduledActivitiesTab ? 'active' : ''}`}
+                      onClick={() => setShowScheduledActivitiesTab(false)}
+                    >
+                      Recomendadas
+                    </button>
+                  </div>
+                </div>
+                
+                {showScheduledActivitiesTab ? (
+                  <>
+                    {activitiesForSelectedDate.length > 0 ? (
+                      <div className="activities-list">
+                        {activitiesForSelectedDate.map(activity => {
+                          const activityName = activity.actividad_nombre || 'Sin nombre';
+                          const horaInicio = activity.hora_inicio ? activity.hora_inicio.slice(0,5) : '--:--';
+                          const horaFin = activity.hora_fin ? activity.hora_fin.slice(0,5) : '--:--';
+                          const matchingRecommendation = activityRecommendations.find(rec => 
+                            (rec.agenda_id === activity.agenda_id) 
+                          );
 
-                        return (
-                          <div key={rec.id} className={`recommendationCard ${rec.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
-                            <div className="recommendationHeader">
-                              <h4>{rec.activity_name}</h4> {/* Asegúrate de usar rec.activity_name si así viene del backend */}
-                              <span className="recommendationDate">
-                                {(() => {
-                                  try {
-                                    // Asegurarse que rec.fecha es un string o se puede convertir a uno en formato YYYY-MM-DD
-                                    let fechaStr;
-                                    if (typeof rec.fecha === 'string') {
-                                      fechaStr = rec.fecha.split('T')[0]; // Tomar solo la parte de la fecha si es un ISO string completo
-                                    } else if (rec.fecha && typeof rec.fecha.toISOString === 'function') {
-                                      fechaStr = rec.fecha.toISOString().split('T')[0];
-                                    } else {
-                                      console.error("Formato de rec.fecha no reconocido:", rec.fecha);
-                                      return "Fecha desconocida";
-                                    }
-
-                                    if (!rec.hora_inicio || typeof rec.hora_inicio !== 'string') {
-                                      console.error("Formato de rec.hora_inicio no reconocido o ausente:", rec.hora_inicio);
-                                      return "Hora desconocida";
-                                    }
-
-                                    const [year, month, day] = fechaStr.split('-');
-                                    const [hours, minutes] = rec.hora_inicio.split(':');
-
-                                    // Validar que todos los componentes son números antes de crear el Date
-                                    if ([year, month, day, hours, minutes].some(val => isNaN(parseInt(val)))) {
-                                        console.error("Componente de fecha/hora inválido:", {year, month, day, hours, minutes});
-                                        return "Componentes de fecha/hora inválidos";
-                                    }
-
-                                    const activityDateTime = new Date(
-                                      parseInt(year),
-                                      parseInt(month) - 1, // Meses son 0-indexados
-                                      parseInt(day),
-                                      parseInt(hours),
-                                      parseInt(minutes)
-                                    );
-                                    
-                                    console.log("Parsed activityDateTime:", activityDateTime);
-
-
-                                    if (isNaN(activityDateTime.getTime())) {
-                                      console.error("activityDateTime resultó en Invalid Date. Componentes:", {year, month, day, hours, minutes});
-                                      return "Fecha inválida (construcción)";
-                                    }
-
-                                    return activityDateTime.toLocaleString('es-ES', {
-                                      weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                                    });
-
-                                  } catch (e) {
-                                    console.error("Error formateando fecha para recomendación:", e, "Datos originales:", {fecha: rec.fecha, hora: rec.hora_inicio});
-                                    return "Error de fecha";
-                                  }
-                                })()}
-                              </span>
-                            </div>
-                            
-                             <>
-                              <div className="recommendationStatus">
-                                {rec.weatherSuitability.isSuitable ? (
-                                  <FiThumbsUp className="statusIcon suitableIcon" />
-                                ) : (
-                                  <FiThumbsDown className="statusIcon unsuitableIcon" />
-                                )}
-                                <span>
-                                  {rec.weatherSuitability.isSuitable ? "Adecuado para realizar" : "No recomendado"}
-                                </span>
+                          return (
+                            <div key={activity.agenda_id || activity.id} className="activity-card">
+                              <div className="activity-time">
+                                <FiClock className="activity-icon" />
+                                {horaInicio} - {horaFin}
                               </div>
-                              
-                              {/* Solo mostrar razones si no es adecuado O si es adecuado y hay una razón específica (como la genérica) */}
-                              {(!rec.weatherSuitability.isSuitable || (rec.weatherSuitability.isSuitable && rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.length > 0)) && (
-                                <div className="recommendationReasons">
-                                  <FiInfo className="reasonInfoIcon" />
-                                  <ul>
-                                    {rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.map((reason, index) => (
-                                      <li key={index}>{reason}</li>
-                                    ))}
-                                  </ul>
+                              <div className="activity-content">
+                                <h4>{activityName}</h4>
+                                {activity.notes && (
+                                  <p className="activity-description">
+                                    {activity.notes}
+                                  </p>
+                                )}
+                                
+                                {matchingRecommendation && ( 
+                                  <>
+                                    <div className={`recommendationStatus mt-2 ${matchingRecommendation.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
+                                      {matchingRecommendation.weatherSuitability.isSuitable ? (
+                                        <FiThumbsUp className="statusIcon suitableIcon" />
+                                      ) : (
+                                        <FiThumbsDown className="statusIcon unsuitableIcon" />
+                                      )}
+                                      <span>
+                                        {matchingRecommendation.weatherSuitability.isSuitable ? "Adequado por clima" : "No recomendado por clima"}
+                                      </span>
+                                    </div>
+                                    {(!matchingRecommendation.weatherSuitability.isSuitable || (matchingRecommendation.weatherSuitability.isSuitable && matchingRecommendation.weatherSuitability.reasons && matchingRecommendation.weatherSuitability.reasons.length > 0)) && (
+                                      <div className="recommendationReasons">
+                                        <FiInfo className="reasonInfoIcon" />
+                                        <ul>
+                                          {matchingRecommendation.weatherSuitability.reasons && matchingRecommendation.weatherSuitability.reasons.map((reason, index) => (
+                                            <li key={index}>{reason}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="no-activities">
+                        No hay actividades programadas para este día
+                      </div>
+                    )}
+
+                    <div className="activityRecommendationsSection mt-8">
+                      <h3 className="recommendationsTitle">Evaluacion de Actividades Agendadas</h3>
+                      {loadingRecommendations && <p>Cargando recomendaciones...</p>}
+                      {errorRecommendations && <p className="statusBubble error">Error: {errorRecommendations}</p>}
+                      
+                      {!loadingRecommendations && !errorRecommendations && activityRecommendations.length === 0 && (
+                        <p>No hay recomendaciones disponibles o no tienes actividades próximas agendadas.</p>
+                      )}
+
+                      {!loadingRecommendations && !errorRecommendations && activityRecommendations.length > 0 && (
+                        <div className="recommendationsGrid">
+                          {activityRecommendations.map(rec => {
+
+                            return (
+                              <div key={rec.id} className={`recommendationCard ${rec.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
+                                <div className="recommendationHeader">
+                                  <h4>{rec.activity_name}</h4>
+                                  <span className="recommendationDate">
+                                    {(() => {
+                                      try {
+                                        let fechaStr;
+                                        if (typeof rec.fecha === 'string') {
+                                          fechaStr = rec.fecha.split('T')[0];
+                                        } else if (rec.fecha && typeof rec.fecha.toISOString === 'function') {
+                                          fechaStr = rec.fecha.toISOString().split('T')[0];
+                                        } else {
+                                          console.error("Unrecognized rec.fecha format:", rec.fecha);
+                                          return "Fecha desconocida";
+                                        }
+
+                                        if (!rec.hora_inicio || typeof rec.hora_inicio !== 'string') {
+                                          console.error("Unrecognized or missing rec.hora_inicio format:", rec.hora_inicio);
+                                          return "Hora desconocida";
+                                        }
+
+                                        const [year, month, day] = fechaStr.split('-');
+                                        const [hours, minutes] = rec.hora_inicio.split(':');
+
+                                        if ([year, month, day, hours, minutes].some(val => isNaN(parseInt(val)))) {
+                                            console.error("Invalid date/time component:", {year, month, day, hours, minutes});
+                                            return "Invalid date/time components";
+                                        }
+
+                                        const activityDateTime = new Date(
+                                          parseInt(year),
+                                          parseInt(month) - 1,
+                                          parseInt(day),
+                                          parseInt(hours),
+                                          parseInt(minutes)
+                                        );
+                                        
+                                        console.log("Parsed activityDateTime:", activityDateTime);
+
+
+                                        if (isNaN(activityDateTime.getTime())) {
+                                          console.error("activityDateTime resulted in Invalid Date. Components:", {year, month, day, hours, minutes});
+                                          return "Invalid date (construction)";
+                                        }
+
+                                        return activityDateTime.toLocaleString('es-ES', {
+                                          weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                        });
+
+                                      } catch (e) {
+                                        console.error("Error formatting date for recommendation:", e, "Original data:", {fecha: rec.fecha, hora: rec.hora_inicio});
+                                        return "Date error";
+                                      }
+                                    })()}
+                                  </span>
                                 </div>
-                              )}
-                            </>
+                                
+                                <>
+                                  <div className="recommendationStatus">
+                                    {rec.weatherSuitability.isSuitable ? (
+                                      <FiThumbsUp className="statusIcon suitableIcon" />
+                                    ) : (
+                                      <FiThumbsDown className="statusIcon unsuitableIcon" />
+                                    )}
+                                    <span>
+                                      {rec.weatherSuitability.isSuitable ? "Adecuado para realizar" : "No recomendado"}
+                                    </span>
+                                  </div>
+                                  {(!rec.weatherSuitability.isSuitable || (rec.weatherSuitability.isSuitable && rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.length > 0)) && (
+                                    <div className="recommendationReasons">
+                                      <FiInfo className="reasonInfoIcon" />
+                                      <ul>
+                                        {rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.map((reason, index) => (
+                                          <li key={index}>{reason}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </>
 
-                          </div>
-                        );
-                      })}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                ) : (
+                  <div className="system-recommendations-placeholder">
+                    <h4 className="text-center text-xl font-semibold mb-4 text-gray-700">Actividades Recomendadas por el Sistema</h4>
+                    <p className="text-center text-gray-500">
+                      Aquí aparecerán las actividades recomendadas por el sistema en base a tus preferencias y el clima.
+                    </p>
+                    <div className="flex justify-center mt-6">
+                      <FiAlertCircle className="text-4xl text-blue-400" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            
-
-
-
           </div>
         )}
       </main>
