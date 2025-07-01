@@ -231,16 +231,39 @@ export default function Dashboard() {
         }
       }
     }
-    const preferencias = preferenciasClimaticasTemp || {
-      tempMinima,
-      tempMaxima,
-      permiteLluvia,
-      lluviaMinima: null,
-      lluviaMaxima,
-      vientoMinimo: null,
-      vientoMaximo,
-      maxUV
-    };
+
+    let finalPreferences;
+
+    if (preferenciasClimaticasTemp) {
+        finalPreferences = {
+            minTemp: preferenciasClimaticasTemp.tempMinima,
+            maxTemp: preferenciasClimaticasTemp.tempMaxima,
+            maxWindSpeed: preferenciasClimaticasTemp.vientoMaximo,
+            maxPrecipitationProbability: preferenciasClimaticasTemp.lluviaProbMaxima,
+            maxPrecipitationIntensity: preferenciasClimaticasTemp.lluviaMaxima,
+            requiresNoPrecipitation: !!preferenciasClimaticasTemp.permiteLluvia,
+            maxUv: preferenciasClimaticasTemp.maxUV,
+        };
+    } else {
+        const selectedActivityData = userActivities.find(
+            act => String(act.id) === String(actividadSeleccionada)
+        );
+
+        if (selectedActivityData && selectedActivityData.preferences) {
+            const storedPrefs = selectedActivityData.preferences;
+            finalPreferences = {
+                minTemp: storedPrefs.min_temp,
+                maxTemp: storedPrefs.max_temp,
+                maxWindSpeed: storedPrefs.max_wind_speed,
+                maxPrecipitationProbability: storedPrefs.max_precipitation_probability,
+                maxPrecipitationIntensity: storedPrefs.max_precipitation_intensity,
+                requiresNoPrecipitation: !!storedPrefs.requires_no_precipitation,
+                maxUv: storedPrefs.max_uv,
+            };
+        } else {
+            finalPreferences = { minTemp: null, maxTemp: null, maxWindSpeed: null, maxPrecipitationProbability: null, maxPrecipitationIntensity: null, requiresNoPrecipitation: false, maxUv: null };
+        }
+    }
 
     const entryData = {
       activityId: Number(actividadSeleccionada),
@@ -253,13 +276,13 @@ export default function Dashboard() {
       longitude: lon,
       reminderEnabled: reminderEnabled || false,
       reminderOffsetMinutes: reminderOffsetMinutes !== '' ? Number(reminderOffsetMinutes) : null,
-      minTemp: preferencias.tempMinima !== null && preferencias.tempMinima !== '' ? Number(preferencias.tempMinima) : null,
-      maxTemp: preferencias.tempMaxima !== null && preferencias.tempMaxima !== '' ? Number(preferencias.tempMaxima) : null,
-      maxWindSpeed: preferencias.vientoMaximo !== null && preferencias.vientoMaximo !== '' ? Number(preferencias.vientoMaximo) : null,
-      maxPrecipitationProbability: preferencias.lluviaProbMaxima !== null && preferencias.lluviaProbMaxima !== '' ? Number(preferencias.lluviaProbMaxima) : null,
-      maxPrecipitationIntensity: preferencias.lluviaMaxima !== null && preferencias.lluviaMaxima !== '' ? Number(preferencias.lluviaMaxima) : null,
-      requiresNoPrecipitation: !!preferencias.permiteLluvia,
-      maxUv: preferencias.maxUV !== null && preferencias.maxUV !== '' ? Number(preferencias.maxUV) : null
+      minTemp: finalPreferences.minTemp !== null && finalPreferences.minTemp !== '' ? Number(finalPreferences.minTemp) : null,
+      maxTemp: finalPreferences.maxTemp !== null && finalPreferences.maxTemp !== '' ? Number(finalPreferences.maxTemp) : null,
+      maxWindSpeed: finalPreferences.maxWindSpeed !== null && finalPreferences.maxWindSpeed !== '' ? Number(finalPreferences.maxWindSpeed) : null,
+      maxPrecipitationProbability: finalPreferences.maxPrecipitationProbability !== null && finalPreferences.maxPrecipitationProbability !== '' ? Number(finalPreferences.maxPrecipitationProbability) : null,
+      maxPrecipitationIntensity: finalPreferences.maxPrecipitationIntensity !== null && finalPreferences.maxPrecipitationIntensity !== '' ? Number(finalPreferences.maxPrecipitationIntensity) : null,
+      requiresNoPrecipitation: !!finalPreferences.requiresNoPrecipitation,
+      maxUv: finalPreferences.maxUv !== null && finalPreferences.maxUv !== '' ? Number(finalPreferences.maxUv) : null
     };
 
     try {
@@ -284,7 +307,10 @@ export default function Dashboard() {
 
       showNotification('success', 'Agenda registrada correctamente');
       setAgendarModalAbierto(false);
+      
       limpiarCampos();
+      setPreferenciasClimaticasTemp(null); 
+      
       setForceRefreshRecommendations(prev => prev + 1); 
     } catch (err) {
       showNotification('error', err.message);
@@ -958,104 +984,108 @@ const handleForecastClick = (day, event) => {
               </div>
 
               <div className='flex gap-4'>
-                <button
-                  className="modal-agendar-button modal-agendar-button-primary flex-1"
-                  onClick={async () => {
-                    const parsedMinTemp = tempMinima === null || tempMinima === '' ? null : Number(tempMinima);
-                    const parsedMaxTemp = tempMaxima === null || tempMaxima === '' ? null : Number(tempMaxima);
-                    const parsedProbMaxLluvia = lluviaProbMaxima === null || lluviaProbMaxima === '' ? null : Number(lluviaProbMaxima);
-                    const parsedMaxLluvia = lluviaMaxima === null || lluviaMaxima === '' ? null : Number(lluviaMaxima);
-                    const parsedMaxViento = vientoMaximo === null || vientoMaximo === '' ? null : Number(vientoMaximo);
-                    const parsedMaxUV = maxUV === null || maxUV === '' ? null : Number(maxUV);
+              <button
+                className="modal-agendar-button modal-agendar-button-primary flex-1"
+                onClick={async () => {
+                  console.log("Intentando guardar preferencias para la actividad:", activityToEdit);
 
+                  if (!activityToEdit || !activityToEdit.id) {
+                    showNotification('error', 'Error: ID de actividad no encontrado. Por favor, cierra y vuelve a intentarlo.');
+                    console.error("Error al guardar preferencias: el objeto activityToEdit es inválido.", activityToEdit);
+                    return;
+                  }
 
-                    if (parsedMinTemp !== null && parsedMaxTemp !== null && parsedMaxTemp < parsedMinTemp) {
-                      showNotification('error', "Temperatura máxima no puede ser inferior a temperatura mínima");
-                      return;
-                    }
-                    if (permiteLluvia && (parsedProbMaxLluvia === null || isNaN(parsedProbMaxLluvia) || parsedProbMaxLluvia < 0 || parsedMaxLluvia === null || isNaN(parsedMaxLluvia) || parsedMaxLluvia < 0 )) {
-                      showNotification('error', "Valores de precipitación inválidos o incompletos");
-                      return;
-                    }
-                    if (parsedMaxViento === null || isNaN(parsedMaxViento) || parsedMaxViento < 0) {
-                      showNotification('error', "Valores de intensidad del viento inválida o incompleta");
-                      return;
-                    }
-                    if (parsedMaxUV !== null && parsedMaxUV < 0) {
-                      showNotification('error', "Índice UV no puede tomar valores negativos");
-                      return;
-                    }
+                  const parsedMinTemp = tempMinima === null || tempMinima === '' ? null : Number(tempMinima);
+                  const parsedMaxTemp = tempMaxima === null || tempMaxima === '' ? null : Number(tempMaxima);
+                  const parsedProbMaxLluvia = lluviaProbMaxima === null || lluviaProbMaxima === '' ? null : Number(lluviaProbMaxima);
+                  const parsedMaxLluvia = lluviaMaxima === null || lluviaMaxima === '' ? null : Number(lluviaMaxima);
+                  const parsedMaxViento = vientoMaximo === null || vientoMaximo === '' ? null : Number(vientoMaximo);
+                  const parsedMaxUV = maxUV === null || maxUV === '' ? null : Number(maxUV);
 
+                  if (parsedMinTemp !== null && parsedMaxTemp !== null && parsedMaxTemp < parsedMinTemp) {
+                    showNotification('error', "Temperatura máxima no puede ser inferior a temperatura mínima");
+                    return;
+                  }
+                  if (permiteLluvia && (parsedProbMaxLluvia === null || isNaN(parsedProbMaxLluvia) || parsedProbMaxLluvia < 0 || parsedMaxLluvia === null || isNaN(parsedMaxLluvia) || parsedMaxLluvia < 0 )) {
+                    showNotification('error', "Valores de precipitación inválidos o incompletos");
+                    return;
+                  }
+                  if (parsedMaxViento === null || isNaN(parsedMaxViento) || parsedMaxViento < 0) {
+                    showNotification('error', "Valores de intensidad del viento inválida o incompleta");
+                    return;
+                  }
+                  if (parsedMaxUV !== null && parsedMaxUV < 0) {
+                    showNotification('error', "Índice UV no puede tomar valores negativos");
+                    return;
+                  }
 
-                    if (activityToEdit) {
-                      const isUpdate = activityToEdit.preferences && Object.keys(activityToEdit.preferences).length > 0;
-                      const method = isUpdate ? 'PUT' : 'POST';
-                      const url = isUpdate 
-                          ? `/api/preference/${usuario.id}/${activityToEdit.id}` 
-                          : `/api/preference/${usuario.id}`; 
+                  if (activityToEdit) {
+                    const url = `/api/preference/${usuario.id}/${activityToEdit.id}`;
+                    const isUpdate = activityToEdit.preferences && Object.keys(activityToEdit.preferences).length > 0;
+                    const method = isUpdate ? 'PUT' : 'POST';
 
-                      const bodyData = {
-                          activityId: activityToEdit.id, 
-                          min_temp: parsedMinTemp,
-                          max_temp: parsedMaxTemp,
-                          max_wind_speed: parsedMaxViento,
-                          max_precipitation_probability: parsedProbMaxLluvia,
-                          max_precipitation_intensity: parsedMaxLluvia,
-                          permite_lluvia: permiteLluvia,
-                          max_uv: parsedMaxUV
-                      };
+                    const bodyData = {
+                      min_temp: parsedMinTemp,
+                      max_temp: parsedMaxTemp,
+                      max_wind_speed: parsedMaxViento,
+                      max_precipitation_probability: parsedProbMaxLluvia,
+                      max_precipitation_intensity: parsedMaxLluvia,
+                      requires_no_precipitation: !permiteLluvia,
+                      max_uv: parsedMaxUV
+                    };
 
-                      try {
-                        const token = sessionStorage.getItem('token');
-                        const res = await fetch(url, {
-                          method: method,
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify(bodyData)
-                        });
-
-                        const contentType = res.headers.get('content-type');
-                        if (!res.ok) {
-                          let errorMsg = 'Error al guardar preferencias';
-                          if (contentType && contentType.includes('application/json')) {
-                            const errorData = await res.json();
-                            errorMsg = errorData.error || errorMsg;
-                          } else {
-                            const errorText = await res.text(); 
-                            console.error("Non-JSON error response:", errorText);
-                            errorMsg = `Error del servidor: ${res.status} ${res.statusText}.`;
-                          }
-                          showNotification('error', errorMsg);
-                          return;
-                        }
-
+                    try {
+                      const token = sessionStorage.getItem('token');
+                      const res = await fetch(url, {
+                        method: method,
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(bodyData)
+                      });
+                      const contentType = res.headers.get('content-type');
+                      if (!res.ok) {
+                        let errorMsg = 'Error al guardar preferencias';
                         if (contentType && contentType.includes('application/json')) {
-                            await res.json(); 
+                          const errorData = await res.json();
+                          errorMsg = errorData.error || errorMsg;
                         } else {
-                            console.log("Successful response, but not JSON (e.g., 204 No Content).");
+                          const errorText = await res.text();
+                          console.error("Non-JSON error response:", errorText);
+                          errorMsg = `Error del servidor: ${res.status}. Intenta de nuevo.`;
                         }
-                        
-                        showNotification('success', `Preferencias ${isUpdate ? 'actualizadas' : 'guardadas'} correctamente`);
-                        fetchUserActivities(); 
-                      } catch (err) {
-                        showNotification('error', err.message || 'Error de conexión al guardar preferencias');
+                        showNotification('error', errorMsg);
                         return;
                       }
-                    }
+                      const tempPrefs = {
+                        tempMinima: parsedMinTemp,
+                        tempMaxima: parsedMaxTemp,
+                        permiteLluvia: permiteLluvia,
+                        lluviaProbMaxima: parsedProbMaxLluvia,
+                        lluviaMaxima: parsedMaxLluvia,
+                        vientoMaximo: parsedMaxViento,
+                        maxUV: parsedMaxUV
+                      };
+                      setPreferenciasClimaticasTemp(tempPrefs);
 
-                    limpiarCampos();
-                    setShowEditPreferences(false);
-                    setActivityToEdit(null);
-                    if (vieneDeAgendar) {
-                      setAgendarModalAbierto(true);
-                      setVieneDeAgendar(false);
+                      showNotification('success', `Preferencias ${isUpdate ? 'actualizadas' : 'guardadas'} correctamente`);
+                      fetchUserActivities();
+
+                      setShowEditPreferences(false);
+                      setActivityToEdit(null);
+                      if (vieneDeAgendar) {
+                        setAgendarModalAbierto(true);
+                        setVieneDeAgendar(false);
+                      }
+                    } catch (err) {
+                      showNotification('error', err.message || 'Error de conexión');
                     }
-                  }}
-                >
-                  Guardar
-                </button>
+                  }
+                }}
+              >
+                Guardar
+              </button>
                 <button
                   className="modal-agendar-button modal-agendar-button-secondary flex-1"
                   onClick={() => {
