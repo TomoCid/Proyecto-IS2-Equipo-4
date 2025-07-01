@@ -78,6 +78,9 @@ export default function Dashboard() {
 
   const [showMainWeatherView, setShowMainWeatherView] = useState(true); 
   const [showScheduledActivitiesTab, setShowScheduledActivitiesTab] = useState(true);
+
+  const [dailyRecommendations, setDailyRecommendations] = useState([]);
+  const [loadingDailyRecs, setLoadingDailyRecs] = useState(false);
   
   // StarIcon for the schedule modal
   const StarIcon = () => (
@@ -195,14 +198,24 @@ export default function Dashboard() {
   }
 
   const limpiarCampos = () => {
-  setTempMinima(null);
-  setTempMaxima(null);
-  setlluviaProbMaxima(null);
-  setlluviaMaxima(null);
-  setVientoMaximo(null);
-  setMaxUV(null)
-  setRequiresNoPrecipitation(false);
-  setPermiteLluvia(false);
+    setTempMinima(null);
+    setTempMaxima(null);
+    setlluviaProbMaxima(null);
+    setlluviaMaxima(null);
+    setVientoMaximo(null);
+    setMaxUV(null)
+    setRequiresNoPrecipitation(false);
+    setPermiteLluvia(false);
+  };
+
+  const limpiarCamposDeAgenda = () => {
+    setActividadSeleccionada("");
+    setCiudadActividad("");
+    setFechaActividad("");
+    setHoraInicio("");
+    setHoraTermino("");
+    setNotasPreferencias('');
+    setPreferenciasClimaticasTemp(null); 
   };
 
   async function handleRegistrarAgenda() {
@@ -317,6 +330,37 @@ export default function Dashboard() {
     }
   }
   
+  const fetchDailyRecommendations = async (date) => {
+    if (!usuario || !weatherData?.location) return;
+
+    setLoadingDailyRecs(true);
+    setDailyRecommendations([]); // Limpiar recomendaciones anteriores
+
+    const formattedDate = date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    const { lat, lon } = weatherData.location;
+    const token = sessionStorage.getItem('token');
+
+    try {
+      const res = await fetch(
+        `/api/users/${usuario.id}/daily-recommendations/${formattedDate}?lat=${lat}&lon=${lon}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (!res.ok) {
+        throw new Error('No se pudieron cargar las recomendaciones.');
+      }
+
+      const data = await res.json();
+      setDailyRecommendations(data);
+
+    } catch (error) {
+      console.error("Error fetching daily recommendations:", error);
+      showNotification('error', error.message);
+    } finally {
+      setLoadingDailyRecs(false);
+    }
+  };
+
   async function fetchScheduledActivities() {
     try {
       const token = sessionStorage.getItem('token');
@@ -1109,7 +1153,7 @@ const handleForecastClick = (day, event) => {
               className="modal-overlay"
               onClick={() => {
                 setAgendarModalAbierto(false);
-                limpiarCampos();
+                limpiarCamposDeAgenda();
                 setPreferenciasClimaticasTemp(null);
               }}
             >
@@ -1213,8 +1257,7 @@ const handleForecastClick = (day, event) => {
                       className="modal-agendar-button modal-agendar-button-secondary"
                       onClick={() => {
                         setAgendarModalAbierto(false);
-                        limpiarCampos();
-                        setPreferenciasClimaticasTemp(null); 
+                        limpiarCamposDeAgenda(); 
                       }}
                     >
                       Cancelar
@@ -1355,7 +1398,10 @@ const handleForecastClick = (day, event) => {
             <h2 className="title text-center mb-8">Mi Calendario de Actividades</h2>
             <div className="calendar-container grid grid-cols-1 md:grid-cols-2 gap-8">
               <Calendar
-                onChange={setCalendarDate}
+                onChange={(date) => {
+                  setCalendarDate(date);
+                  fetchDailyRecommendations(date);
+                }}
                 value={calendarDate}
                 locale="es"
                 className="react-calendar-custom mx-auto max-w-full"
@@ -1558,14 +1604,30 @@ const handleForecastClick = (day, event) => {
                     </div>
                   </>
                 ) : (
-                  <div className="system-recommendations-placeholder">
-                    <h4 className="text-center text-xl font-semibold mb-4 text-gray-700">Actividades Recomendadas por el Sistema</h4>
-                    <p className="text-center text-gray-500">
-                      Aquí aparecerán las actividades recomendadas por el sistema en base a tus preferencias y el clima.
-                    </p>
-                    <div className="flex justify-center mt-6">
-                      <FiAlertCircle className="text-4xl text-blue-400" />
-                    </div>
+
+                  <div className="daily-recommendations-list">
+                    {loadingDailyRecs ? (
+                      <p>Buscando recomendaciones para este día...</p>
+                    ) : dailyRecommendations.length > 0 ? (
+                      dailyRecommendations.map(activity => (
+                        <div key={activity.id} className="activity-card suitable">
+                          <div className="activity-content">
+                            <h4>{activity.name}</h4>
+                            {activity.description && (
+                              <p className="activity-description">{activity.description}</p>
+                            )}
+                            <div className="recommendationStatus mt-2 suitable">
+                              <FiThumbsUp className="statusIcon suitableIcon" />
+                              <span>{activity.weather_summary}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-activities">
+                        <p>No hay actividades recomendadas para las condiciones climáticas de este día.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

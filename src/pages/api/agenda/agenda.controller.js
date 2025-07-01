@@ -125,3 +125,25 @@ export async function handleDeleteAgendaEntry(req, res) {
     res.status(500).json({ error: 'Error al eliminar la entrada de agenda.' });
   }
 }
+
+/**
+ * Controlador para OBTENER recomendaciones de actividad para una fecha específica.
+ */
+export async function handleGetRecommendationsForDate(req, res) {
+  try {
+    const { userId, date } = req.query;
+    const { lat, lon } = req.query;
+
+    if (!date || !lat || !lon) {
+      return res.status(400).json({ error: 'Faltan parámetros requeridos (date, lat, lon).' });
+    }
+
+    const recommendations = await agendaModel.getDailyRecommendations(userId, date, lat, lon);
+    
+    res.status(200).json(recommendations);
+
+  } catch (error) {
+    console.error('Error en handleGetRecommendationsForDate:', error);
+    res.status(500).json({ error: 'Error al obtener las recomendaciones diarias.' });
+  }
+}

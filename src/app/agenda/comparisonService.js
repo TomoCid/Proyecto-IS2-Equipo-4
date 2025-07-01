@@ -1,57 +1,55 @@
-const PRECIPITATION_CODES = [
-    200, 201, 202, 210, 211, 212, 221, 230, 231, 232,
-    300, 301, 302, 310, 311, 312, 313, 314, 321,
-    500, 501, 502, 503, 504, 511, 520, 521, 522, 531,
-    600, 601, 602, 611, 612, 613, 615, 616, 620, 621, 622,
-    701, 711, 721, 731, 741, 751, 761, 762, 771, 781
-];
+// Ruta: src/app/agenda/comparisonService.js
 
 /**
- * Compara las condiciones climáticas con las preferencias de una actividad.
- * @param {object} datosClima - Objeto de datos del clima de OpenWeatherMap para un momento específico
- *                              (puede ser de la API de clima actual o un item de la lista de pronóstico).
- *                              Debe tener: main.temp, wind.speed, weather[0].id
- * @param {object} preferencias - Objeto con las preferencias del usuario para la actividad.
- *                                Debe tener: min_temp, max_temp, max_wind_speed, requires_no_precipitation.
- *                                Los valores pueden ser null si no hay preferencia.
- * @returns {object} Un objeto indicando si el clima es adecuado y la razón si no lo es.
- *                   Ej: { adecuado: true } o { adecuado: false, razon: "Temperatura muy baja" }
+ * Compara las preferencias de una actividad con el pronóstico del tiempo de WeatherAPI.com.
+ * @param {object} preferences - Objeto con las preferencias del usuario.
+ * @param {object} weatherDay - Objeto del pronóstico del día de WeatherAPI.com (forecastForDay.day).
+ * @returns {{isSuitable: boolean, reasons: string[]}} - Objeto indicando si es adecuado y las razones.
  */
-function compararClimaConPreferencias(datosClima, preferencias) {
-    if (!datosClima || !datosClima.main || !datosClima.weather || !datosClima.wind) {
-        return { adecuado: false, razon: "Datos del clima incompletos o no disponibles." };
-    }
-    if (!preferencias) {
-        return { adecuado: true }; // Si no hay preferencias, cualquier clima es "adecuado"
+export function checkWeatherSuitability(preferences, weatherDay) {
+    if (!preferences || !weatherDay) {
+        return { isSuitable: false, reasons: ["Faltan datos de preferencias o del clima."] };
     }
 
-    const tempActual = datosClima.main.temp;
-    const vientoActual = datosClima.wind.speed;
-    const codigoClimaActual = datosClima.weather[0].id;
+    const reasons = [];
 
-    // 1. Comprobar Temperatura
-    if (preferencias.min_temp !== null && tempActual < preferencias.min_temp) {
-        return { adecuado: false, razon: `Temperatura (${tempActual}°C) por debajo del mínimo (${preferencias.min_temp}°C)` };
-    }
-    if (preferencias.max_temp !== null && tempActual > preferencias.max_temp) {
-        return { adecuado: false, razon: `Temperatura (${tempActual}°C) por encima del máximo (${preferencias.max_temp}°C)` };
+    // 1. Comprobar Temperatura Máxima
+    if (preferences.max_temp !== null && weatherDay.maxtemp_c > preferences.max_temp) {
+        reasons.push(`La T° máxima pronosticada (${weatherDay.maxtemp_c}°C) supera tu preferencia (${preferences.max_temp}°C).`);
     }
 
-    // 2. Comprobar Viento
-    if (preferencias.max_wind_speed !== null && vientoActual > preferencias.max_wind_speed) {
-        return { adecuado: false, razon: `Velocidad del viento (${vientoActual} m/s) excede el máximo (${preferencias.max_wind_speed} m/s)` };
+    // 2. Comprobar Temperatura Mínima
+    if (preferences.min_temp !== null && weatherDay.mintemp_c < preferences.min_temp) {
+        reasons.push(`La T° mínima pronosticada (${weatherDay.mintemp_c}°C) es inferior a tu preferencia (${preferences.min_temp}°C).`);
     }
 
-    // 3. Comprobar Precipitación
-    if (preferencias.requires_no_precipitation === true && PRECIPITATION_CODES.includes(codigoClimaActual)) {
-         const descripcionClima = datosClima.weather[0].description || `código ${codigoClimaActual}`;
-         return { adecuado: false, razon: `Se requiere sin precipitación, pero el pronóstico es: ${descripcionClima}` };
+    // 3. Comprobar Viento
+    if (preferences.max_wind_speed !== null && weatherDay.maxwind_kph > preferences.max_wind_speed) {
+        reasons.push(`El viento pronosticado (${weatherDay.maxwind_kph} km/h) supera tu preferencia (${preferences.max_wind_speed} km/h).`);
     }
 
-    // Si pasa todas las comprobaciones
-    return { adecuado: true };
+    // 4. Comprobar si se requiere que no llueva
+    if (preferences.requires_no_precipitation === true && weatherDay.totalprecip_mm > 0) {
+        reasons.push(`Se requiere sin lluvia, pero se pronostican ${weatherDay.totalprecip_mm} mm de precipitación.`);
+    }
+
+    // 5. Comprobar intensidad y probabilidad de lluvia si está permitido
+    if (preferences.requires_no_precipitation === false) {
+        if (preferences.max_precipitation_intensity !== null && weatherDay.totalprecip_mm > preferences.max_precipitation_intensity) {
+            reasons.push(`La precipitación pronosticada (${weatherDay.totalprecip_mm} mm) supera tu preferencia (${preferences.max_precipitation_intensity} mm).`);
+        }
+        if (preferences.max_precipitation_probability !== null && weatherDay.daily_chance_of_rain > preferences.max_precipitation_probability) {
+             reasons.push(`La probabilidad de lluvia (${weatherDay.daily_chance_of_rain}%) supera tu preferencia (${preferences.max_precipitation_probability}%).`);
+        }
+    }
+
+    // 6. Comprobar Índice UV
+    if (preferences.max_uv !== null && weatherDay.uv > preferences.max_uv) {
+        reasons.push(`El índice UV pronosticado (${weatherDay.uv}) supera tu preferencia (${preferences.max_uv}).`);
+    }
+
+    return {
+        isSuitable: reasons.length === 0,
+        reasons: reasons
+    };
 }
-
-module.exports = {
-    compararClimaConPreferencias
-};
