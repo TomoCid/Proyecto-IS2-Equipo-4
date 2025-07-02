@@ -79,9 +79,26 @@ export default function Dashboard() {
   const [showMainWeatherView, setShowMainWeatherView] = useState(false); 
   const [showScheduledActivitiesTab, setShowScheduledActivitiesTab] = useState(true);
 
+  const [isLoading, setIsLoading] = useState(true);
   const [dailyRecommendations, setDailyRecommendations] = useState([]);
   const [loadingDailyRecs, setLoadingDailyRecs] = useState(false);
   
+  const [isReloading, setIsReloading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('forceDashboardReload') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isReloading) {
+      // Removemos la bandera para no crear un bucle
+      sessionStorage.removeItem('forceDashboardReload');
+      // Forzamos la recarga
+      window.location.reload();
+    }
+  }, [isReloading]);
+
   // StarIcon for the schedule modal
   const StarIcon = () => (
     <svg width="20" height="19" viewBox="0 0 20 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -89,6 +106,14 @@ export default function Dashboard() {
             stroke="#1E1E1E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+
+  useEffect(() => {
+    // Este efecto se ejecuta solo una vez cuando la página carga.
+    if (sessionStorage.getItem('forceDashboardReload') === 'true') {
+      sessionStorage.removeItem('forceDashboardReload');
+      window.location.reload();
+    }
+  }, []);
 
   // Check authentication on load
   useEffect(() => {
@@ -497,6 +522,7 @@ export default function Dashboard() {
       showNotification('error', `Error: ${err.message}`);
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -564,6 +590,7 @@ export default function Dashboard() {
         showNotification('error', errorMessage); 
         setDetectStatus('error');
         console.error('Error en geolocalización:', error);
+        setIsLoading(false);
       },
       geoOptions
     );
@@ -715,7 +742,14 @@ const handleForecastClick = (day, event) => {
     setForceRefreshRecommendations(prev => prev + 1);
   };
 
-
+  if (isReloading) {
+    return (
+      <div>
+        <div className="spinner"></div> 
+      </div>
+    );
+  }
+  
   if (checkingAuth) {
     return ( 
       <div className="flex justify-center items-center min-h-screen">
@@ -836,8 +870,12 @@ const handleForecastClick = (day, event) => {
 
       <main className="dashboardContainer">
         <header className="userHeader">
-          <h1 className="title">👋 ¡Bienvenido, {usuario.username}!</h1>
-          <p className="userEmail">📧 {usuario.email}</p>
+
+          <div className="userInfoContainer">
+            <h1 className="title">👋 ¡Bienvenido, {usuario.username}!</h1>
+            <p className="userEmail">📧 {usuario.email}</p>
+          </div>
+
           {weatherData?.location && (
             <p className="cityInfo">
               🌍 <strong>{weatherData.location.name}, {weatherData.location.region}</strong>

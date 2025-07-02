@@ -21,16 +21,23 @@ export async function loginUser(email, password) {
     const result = await pool.query('SELECT * FROM "users" WHERE email = $1', [email]);
     
     if (result.rows.length === 0) {
-        return null;
+        throw new Error('Invalid email or password'); 
     }
 
     const user = result.rows[0];
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-        return null;
+        throw new Error('Invalid email or password');
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1d' });
+    const payload = { 
+      id: user.id, 
+      email: user.email, 
+      username: user.username  
+    };
+
+    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1d' });
+
     return { token, user: { id: user.id, email: user.email, username: user.username } };
 }
 

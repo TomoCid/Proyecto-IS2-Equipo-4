@@ -11,7 +11,6 @@ const montserrat = Montserrat({
   weight: ["400", "700"],
 });
 
-// Función para validar el formato del correo electrónico
 function EmailIsValid(mail) {
   const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
   return emailRegex.test(mail);
@@ -20,16 +19,14 @@ function EmailIsValid(mail) {
 export default function AuthPage() {
   const [isSignUpActive, setIsSignUpActive] = useState(false);
   const router = useRouter();
-
-  // Estados para los campos de ambos formularios
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
 
-  // --- LÓGICA DE REGISTRO (copiada de singup_js.txt) ---
+  
   async function handleSignup(e) {
-    e.preventDefault(); // Prevenir el envío por defecto del formulario
+    e.preventDefault(); 
     if (!username || !email || !password || !confirm) {
       toast.error("Por favor, completa todos los campos.");
       return;
@@ -64,16 +61,19 @@ export default function AuthPage() {
       toast.success("¡Registro exitoso! Ahora puedes iniciar sesión.");
       setTimeout(() => {
         handleSignInClick(); 
-      }, 2000); 
+      }, 1500); 
     } catch (err) {
       console.error("Error en el registro:", err.message);
       toast.error(err.message);
     }
   }
 
-  // --- LÓGICA DE INICIO DE SESIÓN (copiada de index_js.txt) ---
+  
   async function handleLogin(e) {
-    e.preventDefault(); // Prevenir el envío por defecto del formulario
+    e.preventDefault(); 
+
+    console.log("Intentando iniciar sesión con:", { email, password });
+
     if (!email || !password) {
       toast.error("Por favor, completa todos los campos.");
       return;
@@ -92,12 +92,22 @@ export default function AuthPage() {
       }
 
       const data = await response.json();
-      console.log("Usuario autenticado:", data);
+      console.log("Respuesta completa de la API:", data); 
 
       toast.success("Inicio de sesión exitoso");
+      
       sessionStorage.setItem("token", data.token);
+
+      sessionStorage.setItem('forceDashboardReload', 'true');
+
+      if (data.user) {
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      console.log("Token guardado en sessionStorage. Redirigiendo...");
+
       setTimeout(() => {
-        router.push("/dashboard"); // Asegúrate de que esta ruta exista
+        router.push("/dashboard"); 
       }, 1500);
     } catch (err) {
       console.error("Error en el inicio de sesión:", err.message);
@@ -107,7 +117,6 @@ export default function AuthPage() {
 
   const handleSignUpClick = () => {
     setIsSignUpActive(true);
-    // Limpiar campos al cambiar de formulario
     setEmail("");
     setPassword("");
     setUsername("");
@@ -116,7 +125,6 @@ export default function AuthPage() {
   
   const handleSignInClick = () => {
     setIsSignUpActive(false);
-    // Limpiar campos al cambiar de formulario
     setEmail("");
     setPassword("");
     setUsername("");
@@ -203,7 +211,6 @@ export default function AuthPage() {
               required
             />
             <br></br>
-            {/*<a href="#">¿Olvidaste tu contraseña?</a>*/}
             <button className={styles.nextButton} type="submit">Ingresar</button>
           </form>
         </div>
@@ -239,7 +246,7 @@ export default function AuthPage() {
       </div>
       <ToastContainer
         position="top-right"
-        autoClose={2000}
+        autoClose={3000}
         hideProgressBar={false}
         closeOnClick
         pauseOnHover

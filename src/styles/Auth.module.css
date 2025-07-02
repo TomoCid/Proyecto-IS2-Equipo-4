@@ -272,9 +272,9 @@ button.ghost {
 }
 
 .nextButtonGhost {
-  width: 100%;
+  width: 70%;
   padding: 0.9rem 0;
-  background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+  background: linear-gradient(90deg, #2193b079 0%, #6dd55679 200%);
   color: #fff;
   font-size: 1.1rem;
   font-weight: 700;
@@ -287,6 +287,6 @@ button.ghost {
 }
 
 .nextButtonGhost:hover {
-  background: linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%);
+  background: linear-gradient(90deg, #6dd55679 0%, #21935679 100%);
   transform: translateY(-2px) scale(1.03);
 }
