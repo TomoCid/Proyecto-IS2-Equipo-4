@@ -732,68 +732,145 @@ body {
   justify-content: center; /* Centra el contenido en el grid */
 }
 
-.react-calendar-custom {
-  width: 100%;
-  max-width: 400px;
-  background: var(--white);
-  border: 1px solid var(--gray-light);
-  border-radius: 10px;
-  padding: var(--spacing-md);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+/* Estilos generales del calendario */
+.react-calendar {
+  font-family: 'Poppins', sans-serif; /* Usa la misma fuente de tu body */
+  border: none; /* Elimina el borde predeterminado */
+  border-radius: var(--border-radius-md); /* Usa tu border-radius */
+  box-shadow: var(--shadow); /* Aplica tu sombra */
+  background-color: var(--white); /* Fondo blanco para el calendario */
+  color: var(--text); /* Color de texto general */
+  width: 350px; /* Mantén el ancho fijo que definimos antes */
+  max-width: 100%;
+  height: 320px; /* Mantén la altura fija que definimos antes */
 }
 
-.react-calendar-custom .react-calendar__navigation {
+/* Navegación (mes, año, flechas) */
+.react-calendar__navigation {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
+  height: 44px; /* Altura de la barra de navegación */
+  margin-bottom: var(--spacing-sm);
+  background-color: var(--primary); /* Fondo de la navegación */
+  border-top-left-radius: var(--border-radius-md); /* Bordes redondeados superiores */
+  border-top-right-radius: var(--border-radius-md);
+  color: var(--white); /* Color de texto para la navegación */
+  padding: 0 var(--spacing-sm);
 }
 
-.react-calendar-custom .react-calendar__navigation button {
+.react-calendar__navigation button {
+  min-width: 44px;
   background: none;
   border: none;
-  font-size: 1rem;
-  padding: var(--spacing-xs);
-  cursor: pointer;
-  color: var(--text);
-  transition: var(--transition);
+  font-size: 1.2em;
+  font-weight: 500;
+  color: var(--white); /* Color de flechas y label */
+  transition: background-color var(--transition);
+  border-radius: var(--border-radius-sm);
 }
 
-.react-calendar-custom .react-calendar__navigation button:hover {
-  color: var(--primary);
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background-color: var(--primary-dark); /* Color al pasar el ratón */
 }
 
-.react-calendar-custom .react-calendar__navigation__label {
-  font-weight: 600;
-  font-size: 1.1rem;
+.react-calendar__navigation__label {
+  flex-grow: 1;
+  font-weight: 700; /* Texto de mes/año más bold */
+  color: var(--white);
+  padding: 0 var(--spacing-sm); /* Ajusta el padding para centrar */
 }
 
-.react-calendar-custom .react-calendar__month-view__weekdays {
+.react-calendar__navigation__label button {
+  color: var(--white); /* Asegura que el texto del label sea blanco */
+}
+
+
+/* Días de la semana */
+.react-calendar__month-view__weekdays {
   text-align: center;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.8em;
+  color: var(--text-light); /* Color para los días de la semana */
   margin-bottom: var(--spacing-xs);
-  font-size: 0.85rem;
-  color: var(--text-light);
 }
 
-.react-calendar-custom .react-calendar__month-view__days__day {
-  padding: var(--spacing-xs);
-  border-radius: 50%;
-  transition: var(--transition);
-  position: relative;
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none; /* Elimina el subrayado de las abreviaturas */
 }
 
-.react-calendar-custom .react-calendar__month-view__days__day:hover {
-  background: var(--gray-light);
+/* Días individuales */
+.react-calendar__tile {
+  max-width: 100%;
+  padding: var(--spacing-xs) 0;
+  background: none;
+  text-align: center;
+  line-height: 1;
+  color: var(--text); /* Color de los días normales */
+  transition: background-color var(--transition), color var(--transition);
+  border-radius: var(--border-radius-sm); /* Borde redondeado para los días */
 }
 
-.react-calendar-custom .react-calendar__tile--now {
-  background: var(--primary);
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background-color: var(--gray-light); /* Fondo al pasar el ratón */
+  color: var(--text);
+}
+
+/* Día seleccionado (activo) */
+.react-calendar__tile--active {
+  background-color: var(--primary) !important; /* Color primario para el día seleccionado */
+  color: var(--white) !important; /* Texto blanco para el día seleccionado */
+  border-radius: var(--border-radius-sm);
+}
+
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background-color: var(--primary-dark) !important; /* Color más oscuro al pasar el ratón sobre el seleccionado */
+  color: var(--white) !important;
+}
+
+/* Día actual (hoy) */
+.react-calendar__tile--now {
+  background-color: var(--primary-light); /* Puedes definir un light primary o usar un gris claro */
+  background-color: var(--gray-light); /* Un color para hoy, si no está seleccionado */
+  color: var(--text);
+  font-weight: 600; /* Hoy un poco más bold */
+}
+
+.react-calendar__tile--now:enabled:hover,
+.react-calendar__tile--now:enabled:focus {
+  background-color: var(--primary-dark); /* Color al pasar el ratón sobre hoy */
   color: var(--white);
 }
 
-.react-calendar-custom .react-calendar__tile--active {
-  background: var(--primary-dark);
-  color: var(--white);
+
+/* Días deshabilitados (fuera del rango, etc.) */
+.react-calendar__tile:disabled {
+  color: var(--text-light); /* Color más claro para días deshabilitados */
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Vistas de década, año y mes */
+.react-calendar__year-view__months__month,
+.react-calendar__decade-view__years__year,
+.react-calendar__century-view__decades__decade {
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-md) 0;
+}
+
+.react-calendar__year-view__months__month:enabled:hover,
+.react-calendar__decade-view__years__year:enabled:hover,
+.react-calendar__century-view__decades__decade:enabled:hover {
+  background-color: var(--gray-light);
+}
+
+.react-calendar__year-view__months__month--active,
+.react-calendar__decade-view__years__year--active,
+.react-calendar__century-view__decades__decade--active {
+  background-color: var(--primary) !important;
+  color: var(--white) !important;
 }
 
 .calendar-activity-dot {
@@ -1322,25 +1399,34 @@ body {
 }
 
 .activityRecommendationsSection {
-  margin-top: 30px;
-  padding: 20px;
-  background-color: #f9f9f9; /* Light background for the section */
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-top: var(--spacing-xl); /* Usar tu variable de espaciado */
+  padding: var(--spacing-lg); /* Usar tu variable de espaciado */
+  background-color: var(--gray-light); /* Fondo claro para la sección */
+  border-radius: var(--border-radius-md); /* Usar tu border-radius */
+  box-shadow: var(--shadow); /* Usar tu sombra */
+
+  /* Propiedades para el scroll vertical */
+  max-height: 400px; /* Altura máxima antes de que aparezca el scroll */
+  overflow-y: auto; /* Habilita el scroll vertical si el contenido excede max-height */
+  padding-right: var(--spacing-sm); /* Espacio para el scrollbar */
 }
 
 .recommendationsTitle {
   font-size: 1.5em;
-  color: #333;
+  color: #465f5e;
   margin-bottom: 20px;
   border-bottom: 2px solid #eee;
   padding-bottom: 10px;
 }
 
 .recommendationsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  display: flex; /* Habilita Flexbox */
+  flex-direction: column; /* Apila las tarjetas verticalmente */
+  gap: var(--spacing-md); /* Espacio entre cada tarjeta de actividad */
+  /* Asegura que no tenga un padding innecesario que afecte el scroll */
+  padding: 0;
+  margin: 0;
+  list-style: none; /* En caso de que se use un ul/ol en el futuro */
 }
 
 .recommendationCard {

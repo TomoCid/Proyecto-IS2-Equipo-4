@@ -76,7 +76,7 @@ export default function Dashboard() {
   const [preferenciasClimaticasTemp, setPreferenciasClimaticasTemp] = useState(null);
   const [showCreateActivityModal, setShowCreateActivityModal] = useState(false);
 
-  const [showMainWeatherView, setShowMainWeatherView] = useState(true); 
+  const [showMainWeatherView, setShowMainWeatherView] = useState(false); 
   const [showScheduledActivitiesTab, setShowScheduledActivitiesTab] = useState(true);
 
   const [dailyRecommendations, setDailyRecommendations] = useState([]);
@@ -1441,168 +1441,107 @@ const handleForecastClick = (day, event) => {
                   </div>
                 </div>
                 
-                {showScheduledActivitiesTab ? (
-                  <>
-                    {activitiesForSelectedDate.length > 0 ? (
-                      <div className="activities-list">
-                        {activitiesForSelectedDate.map(activity => {
-                          const activityName = activity.actividad_nombre || 'Sin nombre';
-                          const horaInicio = activity.hora_inicio ? activity.hora_inicio.slice(0,5) : '--:--';
-                          const horaFin = activity.hora_fin ? activity.hora_fin.slice(0,5) : '--:--';
-                          const matchingRecommendation = activityRecommendations.find(rec => 
-                            (rec.agenda_id === activity.agenda_id) 
-                          );
+              {showScheduledActivitiesTab ? (
+                <>
+                  {/* Este bloque mostrará directamente la evaluación de actividades para el día */}
+                  <div className="activityRecommendationsSection mt-8">
+                    {loadingRecommendations && <p>Cargando recomendaciones...</p>}
+                    {errorRecommendations && <p className="statusBubble error">Error: {errorRecommendations}</p>}
 
+                    {!loadingRecommendations && !errorRecommendations && activityRecommendations.length === 0 && (
+                      <p>No hay recomendaciones disponibles o no tienes actividades próximas agendadas.</p>
+                    )}
+
+                    {!loadingRecommendations && !errorRecommendations && activityRecommendations.length > 0 && (
+                      <div className="recommendationsGrid">
+                        {activityRecommendations.map(rec => {
                           return (
-                            <div key={activity.agenda_id || activity.id} className="activity-card">
-                              <div className="activity-time">
-                                <FiClock className="activity-icon" />
-                                {horaInicio} - {horaFin}
+                            <div key={rec.id} className={`recommendationCard ${rec.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
+                              <div className="recommendationHeader">
+                                <h4>{rec.activity_name}</h4>
+                                <span className="recommendationDate">
+                                  {(() => {
+                                    try {
+                                      let fechaStr;
+                                      if (typeof rec.fecha === 'string') {
+                                        fechaStr = rec.fecha.split('T')[0];
+                                      } else if (rec.fecha && typeof rec.fecha.toISOString === 'function') {
+                                        fechaStr = rec.fecha.toISOString().split('T')[0];
+                                      } else {
+                                        console.error("Unrecognized rec.fecha format:", rec.fecha);
+                                        return "Fecha desconocida";
+                                      }
+
+                                      if (!rec.hora_inicio || typeof rec.hora_inicio !== 'string') {
+                                        console.error("Unrecognized or missing rec.hora_inicio format:", rec.hora_inicio);
+                                        return "Hora desconocida";
+                                      }
+
+                                      const [year, month, day] = fechaStr.split('-');
+                                      const [hours, minutes] = rec.hora_inicio.split(':');
+
+                                      if ([year, month, day, hours, minutes].some(val => isNaN(parseInt(val)))) {
+                                          console.error("Invalid date/time component:", {year, month, day, hours, minutes});
+                                          return "Invalid date/time components";
+                                      }
+
+                                      const activityDateTime = new Date(
+                                        parseInt(year),
+                                        parseInt(month) - 1,
+                                        parseInt(day),
+                                        parseInt(hours),
+                                        parseInt(minutes)
+                                      );
+                                      
+                                      console.log("Parsed activityDateTime:", activityDateTime);
+
+                                      if (isNaN(activityDateTime.getTime())) {
+                                        console.error("activityDateTime resulted in Invalid Date. Components:", {year, month, day, hours, minutes});
+                                        return "Invalid date (construction)";
+                                      }
+
+                                      return activityDateTime.toLocaleString('es-ES', {
+                                        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                      });
+
+                                    } catch (e) {
+                                      console.error("Error formatting date for recommendation:", e, "Original data:", {fecha: rec.fecha, hora: rec.hora_inicio});
+                                      return "Date error";
+                                    }
+                                  })()}
+                                </span>
                               </div>
-                              <div className="activity-content">
-                                <h4>{activityName}</h4>
-                                {activity.notes && (
-                                  <p className="activity-description">
-                                    {activity.notes}
-                                  </p>
+                              
+                              <>
+                                <div className="recommendationStatus">
+                                  {rec.weatherSuitability.isSuitable ? (
+                                    <FiThumbsUp className="statusIcon suitableIcon" />
+                                  ) : (
+                                    <FiThumbsDown className="statusIcon unsuitableIcon" />
+                                  )}
+                                  <span>
+                                    {rec.weatherSuitability.isSuitable ? "Adecuado para realizar" : "No recomendado"}
+                                  </span>
+                                </div>
+                                {(!rec.weatherSuitability.isSuitable || (rec.weatherSuitability.isSuitable && rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.length > 0)) && (
+                                  <div className="recommendationReasons">
+                                    <FiInfo className="reasonInfoIcon" />
+                                    <ul>
+                                      {rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.map((reason, index) => (
+                                        <li key={index}>{reason}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
                                 )}
-                                
-                                {matchingRecommendation && ( 
-                                  <>
-                                    <div className={`recommendationStatus mt-2 ${matchingRecommendation.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
-                                      {matchingRecommendation.weatherSuitability.isSuitable ? (
-                                        <FiThumbsUp className="statusIcon suitableIcon" />
-                                      ) : (
-                                        <FiThumbsDown className="statusIcon unsuitableIcon" />
-                                      )}
-                                      <span>
-                                        {matchingRecommendation.weatherSuitability.isSuitable ? "Adequado por clima" : "No recomendado por clima"}
-                                      </span>
-                                    </div>
-                                    {(!matchingRecommendation.weatherSuitability.isSuitable || (matchingRecommendation.weatherSuitability.isSuitable && matchingRecommendation.weatherSuitability.reasons && matchingRecommendation.weatherSuitability.reasons.length > 0)) && (
-                                      <div className="recommendationReasons">
-                                        <FiInfo className="reasonInfoIcon" />
-                                        <ul>
-                                          {matchingRecommendation.weatherSuitability.reasons && matchingRecommendation.weatherSuitability.reasons.map((reason, index) => (
-                                            <li key={index}>{reason}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
+                              </>
+
                             </div>
                           );
                         })}
                       </div>
-                    ) : (
-                      <div className="no-activities">
-                        No hay actividades programadas para este día
-                      </div>
                     )}
-
-                    <div className="activityRecommendationsSection mt-8">
-                      <h3 className="recommendationsTitle">Evaluacion de Actividades Agendadas</h3>
-                      {loadingRecommendations && <p>Cargando recomendaciones...</p>}
-                      {errorRecommendations && <p className="statusBubble error">Error: {errorRecommendations}</p>}
-                      
-                      {!loadingRecommendations && !errorRecommendations && activityRecommendations.length === 0 && (
-                        <p>No hay recomendaciones disponibles o no tienes actividades próximas agendadas.</p>
-                      )}
-
-                      {!loadingRecommendations && !errorRecommendations && activityRecommendations.length > 0 && (
-                        <div className="recommendationsGrid">
-                          {activityRecommendations.map(rec => {
-
-                            return (
-                              <div key={rec.id} className={`recommendationCard ${rec.weatherSuitability.isSuitable ? 'suitable' : 'unsuitable'}`}>
-                                <div className="recommendationHeader">
-                                  <h4>{rec.activity_name}</h4>
-                                  <span className="recommendationDate">
-                                    {(() => {
-                                      try {
-                                        let fechaStr;
-                                        if (typeof rec.fecha === 'string') {
-                                          fechaStr = rec.fecha.split('T')[0];
-                                        } else if (rec.fecha && typeof rec.fecha.toISOString === 'function') {
-                                          fechaStr = rec.fecha.toISOString().split('T')[0];
-                                        } else {
-                                          console.error("Unrecognized rec.fecha format:", rec.fecha);
-                                          return "Fecha desconocida";
-                                        }
-
-                                        if (!rec.hora_inicio || typeof rec.hora_inicio !== 'string') {
-                                          console.error("Unrecognized or missing rec.hora_inicio format:", rec.hora_inicio);
-                                          return "Hora desconocida";
-                                        }
-
-                                        const [year, month, day] = fechaStr.split('-');
-                                        const [hours, minutes] = rec.hora_inicio.split(':');
-
-                                        if ([year, month, day, hours, minutes].some(val => isNaN(parseInt(val)))) {
-                                            console.error("Invalid date/time component:", {year, month, day, hours, minutes});
-                                            return "Invalid date/time components";
-                                        }
-
-                                        const activityDateTime = new Date(
-                                          parseInt(year),
-                                          parseInt(month) - 1,
-                                          parseInt(day),
-                                          parseInt(hours),
-                                          parseInt(minutes)
-                                        );
-                                        
-                                        console.log("Parsed activityDateTime:", activityDateTime);
-
-
-                                        if (isNaN(activityDateTime.getTime())) {
-                                          console.error("activityDateTime resulted in Invalid Date. Components:", {year, month, day, hours, minutes});
-                                          return "Invalid date (construction)";
-                                        }
-
-                                        return activityDateTime.toLocaleString('es-ES', {
-                                          weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                                        });
-
-                                      } catch (e) {
-                                        console.error("Error formatting date for recommendation:", e, "Original data:", {fecha: rec.fecha, hora: rec.hora_inicio});
-                                        return "Date error";
-                                      }
-                                    })()}
-                                  </span>
-                                </div>
-                                
-                                <>
-                                  <div className="recommendationStatus">
-                                    {rec.weatherSuitability.isSuitable ? (
-                                      <FiThumbsUp className="statusIcon suitableIcon" />
-                                    ) : (
-                                      <FiThumbsDown className="statusIcon unsuitableIcon" />
-                                    )}
-                                    <span>
-                                      {rec.weatherSuitability.isSuitable ? "Adecuado para realizar" : "No recomendado"}
-                                    </span>
-                                  </div>
-                                  {(!rec.weatherSuitability.isSuitable || (rec.weatherSuitability.isSuitable && rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.length > 0)) && (
-                                    <div className="recommendationReasons">
-                                      <FiInfo className="reasonInfoIcon" />
-                                      <ul>
-                                        {rec.weatherSuitability.reasons && rec.weatherSuitability.reasons.map((reason, index) => (
-                                          <li key={index}>{reason}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </>
-
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </>
+                  </div>
+                </>
                 ) : (
 
                   <div className="daily-recommendations-list">
