@@ -1,0 +1,292 @@
+:global(body) {
+  background: #cbe7f6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  margin: -20px 0 50px;
+}
+
+:global(h1) {
+  font-size: 25px;
+  font-weight: bold;
+  margin: 0;
+}
+
+:global(h2) {
+  font-size: 17px;
+  font-weight: bold;
+  margin: 0;
+}
+
+:global(h3) {
+  font-size: 14px;
+  font-weight: 100;
+  line-height: 20px;
+  letter-spacing: 0.5px;
+}
+
+:global(p) {
+  font-size: 14px;
+  font-weight: 100;
+  line-height: 20px;
+  letter-spacing: 0.5px;
+  margin: 20px 0 30px;
+}
+
+:global(span) {
+  font-size: 12px;
+}
+
+:global(a) {
+  color: #333;
+  font-size: 14px;
+  text-decoration: none;
+  margin: 15px 0;
+}
+
+/* Estilo para los botones principales (naranja/rojo) */
+:global(button) {
+  border-radius: 20px;
+  border: 1px solid #ff4b2b;
+  background-color: #ff4b2b;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 12px 45px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: transform 80ms ease-in;
+  cursor: pointer;
+}
+
+:global(button:active) {
+  transform: scale(0.95);
+}
+
+:global(button:focus) {
+  outline: none;
+}
+
+/* Estilo para los botones "fantasma" (borde blanco) del panel superpuesto */
+button.ghost {
+  background-color: transparent;
+  border-color: #ffffff;
+}
+
+:global(form) {
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 50px;
+  height: 100%;
+  text-align: center;
+}
+
+/* Estilo para los campos de texto (inputs) */
+:global(input) {
+  background-color: #eee; /* Fondo gris claro */
+  border: none;
+  padding: 12px 15px;
+  margin: 8px 0;
+  width: 100%;
+  color: #333; /* <-- ¡AQUÍ ESTÁ LA CORRECCIÓN! Añadimos un color de texto oscuro */
+}
+
+.container {
+  background-color: #fff;
+  border-radius: 22px;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  position: relative;
+  overflow: hidden;
+  width: 768px; 
+  max-width: 100%;
+  min-height: 550px;
+}
+
+.formContainer {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: all 0.6s ease-in-out;
+}
+
+.signInContainer {
+  left: 0;
+  width: 50%;
+  z-index: 2;
+}
+
+.signUpContainer {
+  left: 0;
+  width: 50%;
+  opacity: 0;
+  z-index: 1;
+}
+
+.overlayContainer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 0.6s ease-in-out;
+  z-index: 100;
+}
+
+/* El degradado del panel superpuesto */
+.overlay {
+  color: #ffffff; /* Color del texto del panel */
+  position: relative;
+  left: -100%;
+  height: 100%;
+  width: 200%;
+  transform: translateX(0);
+  transition: transform 0.6s ease-in-out;
+}
+
+.overlayPanel {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 40px;
+  text-align: center;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  transform: translateX(0);
+  transition: transform 0.6s ease-in-out;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.overlayLeft {
+  transform: translateX(-20%);
+  background-image: 
+    linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    url('/images/clima-registro.webp'); 
+}
+
+.overlayRight {
+  right: 0;
+  transform: translateX(0);
+  background-image: 
+    linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+    url('/images/clima-login.webp'); 
+}
+
+
+
+/* --- ANIMACIONES (Sin cambios) --- */
+.container.rightPanelActive .signInContainer {
+  transform: translateX(100%);
+}
+.container.rightPanelActive .overlayContainer {
+  transform: translateX(-100%);
+}
+.container.rightPanelActive .signUpContainer {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: show 0.6s;
+}
+.container.rightPanelActive .overlay {
+  transform: translateX(50%);
+}
+.container.rightPanelActive .overlayLeft {
+  transform: translateX(0);
+}
+.container.rightPanelActive .overlayRight {
+  transform: translateX(20%);
+}
+@keyframes show {
+  0%, 49.99% {
+    opacity: 0;
+    z-index: 1;
+  }
+  50%, 100% {
+    opacity: 1;
+    z-index: 5;
+  }
+}
+
+.inputField {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #17627a; /* Azul oscuro, bien visible */
+  background: #f9fafd;
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.inputField:focus {
+  border: 1.5px solid #2193b0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.07);
+}
+
+.inputField::placeholder {
+  color: #2193b0;         
+  opacity: 1;             
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.welcomeText h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2193b0;
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+
+.nextButton {
+  width: 100%;
+  padding: 0.9rem 0;
+  background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.10);
+}
+
+.nextButton:hover {
+  background: linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.nextButtonGhost {
+  width: 100%;
+  padding: 0.9rem 0;
+  background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  margin-bottom: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.10);
+}
+
+.nextButtonGhost:hover {
+  background: linear-gradient(90deg, #6dd5ed 0%, #2193b0 100%);
+  transform: translateY(-2px) scale(1.03);
+}
