@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { ActivityFormData, ActivityWithPreferences } from 'src/app/types'; 
 import '../../styles/crearActividad.css'
 
@@ -34,7 +34,7 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
   const [formData, setFormData] = useState<ActivityFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const numericUserId = Number(userId);
 
   const isEditingUserActivity = activityToEdit && activityToEdit.user_id === userId;
@@ -42,6 +42,7 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
   const isCreatingNew = !activityToEdit;
 
   useEffect(() => {
+    setError(null);
     if (activityToEdit) {
       setFormData({
         name: activityToEdit.name || '',
@@ -93,6 +94,29 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
       setIsLoading(false);
       return;
     }
+    if(formData.min_temp!=null && formData.max_temp!=null){
+      if (
+        formData.min_temp >= 100 ||
+        formData.max_temp >= 100
+      ){
+        setError("La temperatura debe ser inferior a 100 grados.");
+        setIsLoading(false);
+        setTimeout(() => {
+          errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        return;
+      }
+      else if(formData.min_temp <= -100 ||formData.min_temp <= -100){
+        setError("La temperatura debe ser superior a -100 grados.");
+        setIsLoading(false);
+        setTimeout(() => {
+          errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+        return;
+      }
+
+    }
+
     if (
       formData.min_temp != null && 
       formData.max_temp != null && 
@@ -100,6 +124,9 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
     ) {
         setError("La temperatura mínima no puede ser mayor que la máxima.");
         setIsLoading(false);
+        setTimeout(() => {
+          errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
         return;
     }
 
@@ -170,7 +197,11 @@ const ActivityFormModal: React.FC<ActivityFormModalProps> = ({
     <div className="modal-backdrop"> {/* Estilo para el fondo oscuro */}
       <div className="modal-content"> {/* Estilo para el contenido del modal */}
         <h2>{title}</h2>
-        {error && <p className="error-message">{error}</p>}
+        {error && (
+          <p className="error-message" ref={errorRef}>
+            {error}
+          </p>
+        )}
         <form onSubmit={handleSubmit}>
           <fieldset>
             <legend>Detalles de la Actividad</legend>
