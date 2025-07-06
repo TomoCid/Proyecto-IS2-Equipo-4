@@ -83,6 +83,8 @@ export default function Dashboard() {
   const [dailyRecommendations, setDailyRecommendations] = useState([]);
   const [loadingDailyRecs, setLoadingDailyRecs] = useState(false);
   
+  const [activeStartDate, setActiveStartDate] = useState(new Date());
+
   const [isReloading, setIsReloading] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('forceDashboardReload') === 'true';
@@ -1171,7 +1173,7 @@ const handleForecastClick = (day, event) => {
                 <button
                   className="modal-agendar-button modal-agendar-button-secondary flex-1"
                   onClick={() => {
-                    limpiarCampos();
+                    limpiarCampos();-+-
                     setPreferenciasClimaticasTemp(null);
                     setShowEditPreferences(false);
                     if (vieneDeAgendar) {
@@ -1443,8 +1445,16 @@ const handleForecastClick = (day, event) => {
                 value={calendarDate}
                 locale="es"
                 className="react-calendar-custom mx-auto max-w-full"
+                onActiveStartDateChange={({ activeStartDate }) => setActiveStartDate(activeStartDate)}
                 tileContent={({ date, view }) => {
                   if (view === 'month') {
+                    
+                    const isCurrentMonth = date.getMonth() === activeStartDate.getMonth();
+                    
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const isFutureDay = date >= today;
+
                     const hasScheduled = scheduledActivities.some(
                       activity => new Date(activity.fecha).toDateString() === date.toDateString()
                     );
@@ -1452,8 +1462,14 @@ const handleForecastClick = (day, event) => {
                       rec => new Date(rec.fecha).toDateString() === date.toDateString()
                     );
                     const hasActivity = hasScheduled || hasRecommendationForDay;
-                    return hasActivity ? <div className="calendar-activity-dot" /> : null;
+                    return (
+                      <>
+                        {hasActivity && isFutureDay && <div className="calendar-activity-dot" />}
+                        {!isCurrentMonth && <div className="calendar-outside-month-overlay"></div>}
+                      </>
+                    );
                   }
+                  return null;
                 }}
               />
               
@@ -1586,20 +1602,22 @@ const handleForecastClick = (day, event) => {
                     {loadingDailyRecs ? (
                       <p>Buscando recomendaciones para este día...</p>
                     ) : dailyRecommendations.length > 0 ? (
-                      dailyRecommendations.map(activity => (
-                        <div key={activity.id} className="activity-card suitable">
-                          <div className="activity-content">
-                            <h4>{activity.name}</h4>
-                            {activity.description && (
-                              <p className="activity-description">{activity.description}</p>
-                            )}
-                            <div className="recommendationStatus mt-2 suitable">
-                              <FiThumbsUp className="statusIcon suitableIcon" />
-                              <span>{activity.weather_summary}</span>
+                      <div className="scrollable-activities">
+                        {dailyRecommendations.slice(0, dailyRecommendations.length).map(activity => (
+                          <div key={activity.id} className="activity-card suitable">
+                            <div className="activity-content">
+                              <h4>{activity.name}</h4>
+                              {activity.description && (
+                                <p className="activity-description">{activity.description}</p>
+                              )}
+                              <div className="recommendationStatus mt-2 suitable">
+                                <FiThumbsUp className="statusIcon suitableIcon" />
+                                <span>{activity.weather_summary}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     ) : (
                       <div className="no-activities">
                         <p>No hay actividades recomendadas para las condiciones climáticas de este día.</p>
