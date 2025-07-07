@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiSearch, FiMapPin, FiCalendar, FiX, FiCheck, FiAlertCircle, FiBookmark, FiClock, FiPlus, FiSettings } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiCalendar, FiX, FiCheck, FiAlertCircle, FiBookmark, FiClock, FiPlus, FiSettings, FiLogOut } from 'react-icons/fi';
 import { MdSettings } from 'react-icons/md';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -776,14 +776,15 @@ const handleForecastClick = (day, event) => {
             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
           />
           {showSettingsMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
-              <button
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                onClick={handleLogout}
-              >
-                Cerrar sesión
-              </button>
-            </div>
+          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+            <button
+              className="logout-button" // Usamos solo la clase que definiremos
+              onClick={handleLogout}
+            >
+              <FiLogOut />
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
           )}
         </div>
       </div>

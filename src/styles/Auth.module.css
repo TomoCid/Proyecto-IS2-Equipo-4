@@ -59,6 +59,7 @@
   text-transform: uppercase;
   transition: transform 80ms ease-in;
   cursor: pointer;
+  margin-top: 20px;
 }
 
 :global(button:active) {
